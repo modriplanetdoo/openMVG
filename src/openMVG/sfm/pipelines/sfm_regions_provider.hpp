@@ -30,29 +30,66 @@ struct Regions_Provider
   virtual bool load(
     const SfM_Data & sfm_data,
     const std::string & feat_directory,
-    std::unique_ptr<features::Regions>& region_type)
+    std::unique_ptr<features::Regions> & region_type,
+    bool features_only = false)
   {
-    C_Progress_display my_progress_bar( sfm_data.GetViews().size(),
+    std::set<IndexT> views;
+
+    for (Views::const_iterator iter = sfm_data.views.begin(); iter != sfm_data.views.end(); ++iter)
+    {
+      views.insert(iter->first);
+    }
+
+    return load(sfm_data, views, feat_directory, region_type, features_only);
+  }
+
+  // Load subset of Regions related to a provided SfM_Data View container
+  virtual bool load(
+    const SfM_Data & sfm_data,
+    const std::set<IndexT> set_ViewIds,
+    const std::string & feat_directory,
+    std::unique_ptr<features::Regions> & region_type,
+    bool features_only = false)
+  {
+    std::map<IndexT, std::string> image_names;
+
+    for (std::set<IndexT>::const_iterator iter = set_ViewIds.begin(); iter != set_ViewIds.end(); ++iter)
+    {
+      const std::string sImageName = stlplus::create_filespec(sfm_data.s_root_path, sfm_data.views.at(*iter)->s_Img_path);
+      image_names[*iter] = sImageName;
+    }
+
+    return load(image_names, feat_directory, region_type, features_only);
+  }
+
+  virtual bool load(
+    const std::map<IndexT, std::string> & views,
+    const std::string & feat_directory,
+    std::unique_ptr<features::Regions> & region_type,
+    bool features_only = false)
+  {
+    C_Progress_display my_progress_bar( views.size(),
       std::cout, "\n- Regions Loading -\n");
     // Read for each view the corresponding regions and store them
     bool bContinue = true;
 #ifdef OPENMVG_USE_OPENMP
     #pragma omp parallel
 #endif
-    for (Views::const_iterator iter = sfm_data.GetViews().begin();
-      iter != sfm_data.GetViews().end() && bContinue; ++iter)
+    for (std::map<IndexT, std::string>::const_iterator iter = views.begin();
+      iter != views.end() && bContinue; ++iter)
     {
 #ifdef OPENMVG_USE_OPENMP
     #pragma omp single nowait
 #endif
       {
-        const std::string sImageName = stlplus::create_filespec(sfm_data.s_root_path, iter->second.get()->s_Img_path);
+        const std::string sImageName = iter->second;
         const std::string basename = stlplus::basename_part(sImageName);
         const std::string featFile = stlplus::create_filespec(feat_directory, basename, ".feat");
         const std::string descFile = stlplus::create_filespec(feat_directory, basename, ".desc");
 
         std::unique_ptr<features::Regions> regions_ptr(region_type->EmptyClone());
-        if (!regions_ptr->Load(featFile, descFile))
+        if (!features_only && !regions_ptr->Load(featFile, descFile)
+                || features_only && !regions_ptr->LoadFeatures(featFile))
         {
           std::cerr << "Invalid regions files for the view: " << sImageName << std::endl;
 #ifdef OPENMVG_USE_OPENMP
@@ -64,7 +101,7 @@ struct Regions_Provider
         #pragma omp critical
 #endif
         {
-          regions_per_view[iter->second.get()->id_view] = std::move(regions_ptr);
+          regions_per_view[iter->first] = std::move(regions_ptr);
           ++my_progress_bar;
         }
       }
