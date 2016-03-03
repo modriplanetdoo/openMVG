@@ -72,6 +72,7 @@ int main(int argc, char **argv)
   bool bForce = false;
   bool bGuided_matching = false;
   int imax_iteration = 2048;
+  int iMaxBatchSize = -1;
 
   //required
   cmd.add( make_option('i', sSfM_Data_Filename, "input_file") );
@@ -85,6 +86,7 @@ int main(int argc, char **argv)
   cmd.add( make_option('f', bForce, "force") );
   cmd.add( make_option('m', bGuided_matching, "guided_matching") );
   cmd.add( make_option('I', imax_iteration, "max_iteration") );
+  cmd.add( make_option('b', iMaxBatchSize, "max_batch_size") );
 
   try {
       if (argc == 1) throw std::string("Invalid command line parameter.");
@@ -120,7 +122,9 @@ int main(int argc, char **argv)
       << "  For Binary based descriptor:\n"
       << "    BRUTEFORCEHAMMING: BruteForce Hamming matching.\n"
       << "[-m|--guided_matching]\n"
-      << "  use the found model to improve the pairwise correspondences."
+      << "  use the found model to improve the pairwise correspondences.\n"
+      << "[-b|--max_batch_size]\n"
+      << "  limit the number of regions in memory."
       << std::endl;
 
       std::cerr << s << std::endl;
@@ -138,7 +142,8 @@ int main(int argc, char **argv)
             << "--video_mode_matching " << iMatchingVideoMode << "\n"
             << "--pair_list " << sPredefinedPairList << "\n"
             << "--nearest_matching_method " << sNearestMatchingMethod << "\n"
-            << "--guided_matching " << bGuided_matching << std::endl;
+            << "--guided_matching " << bGuided_matching << "\n"
+            << "--max_batch_size " << iMaxBatchSize << std::endl;
 
   EPairMode ePairmode = (iMatchingVideoMode == -1 ) ? PAIR_EXHAUSTIVE : PAIR_CONTIGUOUS;
 
@@ -212,13 +217,6 @@ int main(int argc, char **argv)
   //    - Descriptor matching (according user method choice)
   //    - Keep correspondences only if NearestNeighbor ratio is ok
   //---------------------------------------
-
-  // Load the corresponding view regions
-  std::shared_ptr<Regions_Provider> regions_provider = std::make_shared<Regions_Provider>();
-  if (!regions_provider->load(sfm_data, sMatchesDirectory, regions_type)) {
-    std::cerr << std::endl << "Invalid regions." << std::endl;
-    return EXIT_FAILURE;
-  }
 
   PairWiseMatches map_PutativesMatches;
 
@@ -335,8 +333,26 @@ int main(int argc, char **argv)
           };
           break;
       }
-      // Photometric matching of putative pairs
-      collectionMatcher->Match(sfm_data, regions_provider, pairs, map_PutativesMatches);
+
+      if (iMaxBatchSize == -1) {
+        iMaxBatchSize = sfm_data.views.size();
+      }
+
+      while(!pairs.empty()) {
+        // Extract subset
+        Pair_Set sub_pairs;
+        std::set<IndexT> subset = takePairsSubset(pairs, iMaxBatchSize, sub_pairs);
+
+        // Load the corresponding view regions
+        std::shared_ptr<Regions_Provider> regions_provider = std::make_shared<Regions_Provider>();
+        if (!regions_provider->load(sfm_data, subset, sMatchesDirectory, regions_type)) {
+          std::cerr << std::endl << "Invalid regions." << std::endl;
+          return EXIT_FAILURE;
+        }
+
+        // Photometric matching of putative pairs
+        collectionMatcher->Match(sfm_data, regions_provider, sub_pairs, map_PutativesMatches);
+      }
       //---------------------------------------
       //-- Export putative matches
       //---------------------------------------
@@ -371,8 +387,15 @@ int main(int argc, char **argv)
   //    - Use an upper bound for the a contrario estimated threshold
   //---------------------------------------
 
+  // Load the corresponding view features
+  std::shared_ptr<Regions_Provider> features_provider = std::make_shared<Regions_Provider>();
+  if (!features_provider->load(sfm_data, sMatchesDirectory, regions_type, true)) {
+    std::cerr << std::endl << "Invalid regions." << std::endl;
+    return EXIT_FAILURE;
+  }
+
   std::unique_ptr<ImageCollectionGeometricFilter> filter_ptr(
-    new ImageCollectionGeometricFilter(&sfm_data, regions_provider));
+    new ImageCollectionGeometricFilter(&sfm_data, features_provider));
 
   if (filter_ptr)
   {

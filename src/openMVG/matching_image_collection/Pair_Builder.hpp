@@ -38,6 +38,29 @@ static Pair_Set contiguousWithOverlap(const size_t N, const size_t overlapSize)
   return pairs;
 }
 
+static std::set<IndexT> takePairsSubset(Pair_Set & pairs, int max_subset_size, Pair_Set & sub_pairs) {
+  std::set<IndexT> index_set;
+
+  Pair_Set unused_pairs;
+
+  for (Pair_Set::const_iterator iter = pairs.begin(); iter != pairs.end(); ++iter) {
+    if (index_set.size() < max_subset_size) index_set.insert(iter->first);
+    if (index_set.size() < max_subset_size) index_set.insert(iter->second);
+
+    bool has_first = index_set.find(iter->first) != index_set.end();
+    bool has_second = index_set.find(iter->second) != index_set.end();
+
+    if (has_first && has_second) {
+        sub_pairs.insert(*iter);
+    } else {
+        unused_pairs.insert(*iter);
+    }
+  }
+
+  pairs.swap(unused_pairs);
+  return index_set;
+}
+
 /// Load a set of Pair_Set from a file
 /// I J K L (pair that link I)
 static bool loadPairs(
