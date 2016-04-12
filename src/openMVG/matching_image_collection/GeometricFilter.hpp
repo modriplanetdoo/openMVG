@@ -34,13 +34,14 @@ struct ImageCollectionGeometricFilter
   {}
 
   /// Perform robust model estimation (with optional guided_matching) for all the pairs and regions correspondences contained in the putative_matches set.
-  template<typename GeometryFunctor>
+  template<typename GeometryFunctor, class ProgressType = C_Progress_display>
   void Robust_model_estimation
   (
     const GeometryFunctor & functor,
     const PairWiseMatches & putative_matches,
     const bool b_guided_matching = false,
-    const double d_distance_ratio = 0.6
+    const double d_distance_ratio = 0.6,
+	ProgressType &my_progress_bar = ProgressType(0)
   );
 
   const PairWiseMatches & Get_geometric_matches() const {return _map_GeometricMatches;}
@@ -51,16 +52,17 @@ struct ImageCollectionGeometricFilter
   PairWiseMatches _map_GeometricMatches;
 };
 
-template<typename GeometryFunctor>
+template<typename GeometryFunctor, class ProgressType>
 void ImageCollectionGeometricFilter::Robust_model_estimation
 (
   const GeometryFunctor & functor,
   const PairWiseMatches & putative_matches,
   const bool b_guided_matching,
-  const double d_distance_ratio
+  const double d_distance_ratio,
+  ProgressType &my_progress_bar
 )
 {
-  C_Progress_display my_progress_bar( putative_matches.size() );
+  my_progress_bar.restart( putative_matches.size() );
 
 #ifdef OPENMVG_USE_OPENMP
 #pragma omp parallel for schedule(dynamic)
