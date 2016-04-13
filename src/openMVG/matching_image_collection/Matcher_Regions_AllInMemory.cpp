@@ -31,7 +31,8 @@ void Matcher_Regions_AllInMemory::Match(
   const sfm::SfM_Data & sfm_data,
   const std::shared_ptr<sfm::Regions_Provider> & regions_provider,
   const Pair_Set & pairs,
-  PairWiseMatches & map_PutativesMatches)const // the pairwise photometric corresponding points
+  PairWiseMatches & map_PutativesMatches, // the pairwise photometric corresponding points
+  C_Progress &my_progress_bar)const
 {
 #ifdef OPENMVG_USE_OPENMP
   std::cout << "Using the OPENMP thread interface" << std::endl;
@@ -39,7 +40,7 @@ void Matcher_Regions_AllInMemory::Match(
   const bool b_multithreaded_pair_search = (_eMatcherType == CASCADE_HASHING_L2);
   // -> set to true for CASCADE_HASHING_L2, since OpenMP instructions are not used in this matcher
 
-  C_Progress_display my_progress_bar( pairs.size() );
+  my_progress_bar.restart( pairs.size() );
 
   // Sort pairs according the first index to minimize the MatcherT build operations
   typedef std::map<size_t, std::vector<size_t> > Map_vectorT;

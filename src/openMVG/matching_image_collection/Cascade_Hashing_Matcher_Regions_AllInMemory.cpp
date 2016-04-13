@@ -36,10 +36,11 @@ void Match
   const sfm::Regions_Provider & regions_provider,
   const Pair_Set & pairs,
   float fDistRatio,
-  PairWiseMatches & map_PutativesMatches // the pairwise photometric corresponding points
+  PairWiseMatches & map_PutativesMatches, // the pairwise photometric corresponding points
+  C_Progress &my_progress_bar
 )
 {
-  C_Progress_display my_progress_bar( pairs.size() );
+  my_progress_bar.restart( pairs.size() );
 
   // Collect used view indexes
   std::set<IndexT> used_index;
@@ -222,7 +223,8 @@ void Cascade_Hashing_Matcher_Regions_AllInMemory::Match
   const sfm::SfM_Data & sfm_data,
   const std::shared_ptr<sfm::Regions_Provider> & regions_provider,
   const Pair_Set & pairs,
-  PairWiseMatches & map_PutativesMatches // the pairwise photometric corresponding points
+  PairWiseMatches & map_PutativesMatches, // the pairwise photometric corresponding points
+  C_Progress &my_progress_bar
 )const
 {
 #ifdef OPENMVG_USE_OPENMP
@@ -244,7 +246,8 @@ void Cascade_Hashing_Matcher_Regions_AllInMemory::Match
       *regions_provider.get(),
       pairs,
       f_dist_ratio_,
-      map_PutativesMatches);
+      map_PutativesMatches,
+	  my_progress_bar);
   }
   else
   if(regions.Type_id() == typeid(float).name())
@@ -254,7 +257,8 @@ void Cascade_Hashing_Matcher_Regions_AllInMemory::Match
       *regions_provider.get(),
       pairs,
       f_dist_ratio_,
-      map_PutativesMatches);
+      map_PutativesMatches,
+	  my_progress_bar);
   }
   else
   {
