@@ -31,7 +31,8 @@ struct Regions_Provider
     const SfM_Data & sfm_data,
     const std::string & feat_directory,
     std::unique_ptr<features::Regions> & region_type,
-    bool features_only = false)
+    bool features_only = false,
+    C_Progress &my_progress_bar = C_Progress_display(0, std::cout, "\n- Regions Loading -\n"))
   {
     std::set<IndexT> views;
 
@@ -40,7 +41,7 @@ struct Regions_Provider
       views.insert(iter->first);
     }
 
-    return load(sfm_data, views, feat_directory, region_type, features_only);
+    return load(sfm_data, views, feat_directory, region_type, features_only, my_progress_bar);
   }
 
   // Load subset of Regions related to a provided SfM_Data View container
@@ -49,7 +50,8 @@ struct Regions_Provider
     const std::set<IndexT> set_ViewIds,
     const std::string & feat_directory,
     std::unique_ptr<features::Regions> & region_type,
-    bool features_only = false)
+    bool features_only = false,
+    C_Progress &my_progress_bar = C_Progress_display(0, std::cout, "\n- Regions Loading -\n"))
   {
     std::map<IndexT, std::string> image_names;
 
@@ -59,17 +61,17 @@ struct Regions_Provider
       image_names[*iter] = sImageName;
     }
 
-    return load(image_names, feat_directory, region_type, features_only);
+    return load(image_names, feat_directory, region_type, features_only, my_progress_bar);
   }
 
   virtual bool load(
     const std::map<IndexT, std::string> & views,
     const std::string & feat_directory,
     std::unique_ptr<features::Regions> & region_type,
-    bool features_only = false)
+    bool features_only = false,
+    C_Progress &my_progress_bar = C_Progress_display(0, std::cout, "\n- Regions Loading -\n"))
   {
-    C_Progress_display my_progress_bar( views.size(),
-      std::cout, "\n- Regions Loading -\n");
+    my_progress_bar.restart( views.size() );
     // Read for each view the corresponding regions and store them
     bool bContinue = true;
 #ifdef OPENMVG_USE_OPENMP
