@@ -34,14 +34,14 @@ struct ImageCollectionGeometricFilter
   {}
 
   /// Perform robust model estimation (with optional guided_matching) for all the pairs and regions correspondences contained in the putative_matches set.
-  template<typename GeometryFunctor, class ProgressType = C_Progress_display>
+  template<typename GeometryFunctor>
   void Robust_model_estimation
   (
     const GeometryFunctor & functor,
     const PairWiseMatches & putative_matches,
     const bool b_guided_matching = false,
     const double d_distance_ratio = 0.6,
-	ProgressType &my_progress_bar = ProgressType(0)
+    C_Progress &my_progress_bar = C_Progress_display(0)
   );
 
   const PairWiseMatches & Get_geometric_matches() const {return _map_GeometricMatches;}
@@ -52,14 +52,14 @@ struct ImageCollectionGeometricFilter
   PairWiseMatches _map_GeometricMatches;
 };
 
-template<typename GeometryFunctor, class ProgressType>
+template<typename GeometryFunctor>
 void ImageCollectionGeometricFilter::Robust_model_estimation
 (
   const GeometryFunctor & functor,
   const PairWiseMatches & putative_matches,
   const bool b_guided_matching,
   const double d_distance_ratio,
-  ProgressType &my_progress_bar
+  C_Progress &my_progress_bar
 )
 {
   my_progress_bar.restart( putative_matches.size() );
