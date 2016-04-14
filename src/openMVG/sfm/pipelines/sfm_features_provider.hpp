@@ -28,10 +28,10 @@ struct Features_Provider
   virtual bool load(
     const SfM_Data & sfm_data,
     const std::string & feat_directory,
-    std::unique_ptr<features::Regions>& region_type)
+    std::unique_ptr<features::Regions>& region_type,
+    C_Progress &my_progress_bar = C_Progress_display(0, std::cout, "\n- Features Loading -\n"))
   {
-    C_Progress_display my_progress_bar( sfm_data.GetViews().size(),
-      std::cout, "\n- Features Loading -\n" );
+	  my_progress_bar.restart( sfm_data.GetViews().size() );
     // Read for each view the corresponding features and store them as PointFeatures
     bool bContinue = true;
 #ifdef OPENMVG_USE_OPENMP
