@@ -10,6 +10,8 @@
 #include "openMVG/sfm/sfm_data.hpp"
 #include <string>
 
+#include "third_party/progress/progress.hpp"
+
 namespace openMVG {
 namespace sfm {
 
@@ -30,7 +32,7 @@ public:
 
   virtual ~ReconstructionEngine() {}
 
-  virtual bool Process() = 0;
+  virtual bool Process(C_Progress &progress = C_Progress(0)) = 0;
 
   bool Get_bFixedIntrinsics() const {return _bFixedIntrinsics;}
   void Set_bFixedIntrinsics(bool bVal) {_bFixedIntrinsics = bVal;}

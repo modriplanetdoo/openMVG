@@ -83,7 +83,7 @@ void SequentialSfMReconstructionEngine::SetMatchesProvider(Matches_Provider * pr
   _matches_provider = provider;
 }
 
-bool SequentialSfMReconstructionEngine::Process() {
+bool SequentialSfMReconstructionEngine::Process(C_Progress &progress) {
 
   //-------------------
   //-- Incremental reconstruction
@@ -93,6 +93,7 @@ bool SequentialSfMReconstructionEngine::Process() {
     return false;
 
   // Initial pair choice
+  progress.restart(0);
   if (_initialpair == Pair(0,0))
   {
     if (!AutomaticInitialPairChoice(_initialpair))
@@ -107,11 +108,13 @@ bool SequentialSfMReconstructionEngine::Process() {
   // Else a starting pair was already initialized before
 
   // Initial pair Essential Matrix and [R|t] estimation.
+  progress.restart(0);
   if (!MakeInitialPair3D(_initialpair))
     return false;
 
   // Compute robust Resection of remaining images
   // - group of images will be selected and resection + scene completion will be tried
+  progress.restart(0);
   size_t resectionGroupIndex = 0;
   std::vector<size_t> vec_possible_resection_indexes;
   while (FindImagesWithPossibleResection(vec_possible_resection_indexes))
@@ -153,6 +156,7 @@ bool SequentialSfMReconstructionEngine::Process() {
     << "-- #Tracks, #3D points: " << _sfm_data.GetLandmarks().size() << "\n"
     << "-------------------------------" << "\n";
 
+  progress.restart(0);
   Histogram<double> h;
   ComputeResidualsHistogram(&h);
   std::cout << "\nHistogram of residuals:" << h.ToString() << std::endl;

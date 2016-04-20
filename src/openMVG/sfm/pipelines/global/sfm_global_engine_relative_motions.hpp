@@ -36,7 +36,7 @@ public:
   void SetRotationAveragingMethod(ERotationAveragingMethod eRotationAveragingMethod);
   void SetTranslationAveragingMethod(ETranslationAveragingMethod _eTranslationAveragingMethod);
 
-  virtual bool Process();
+  virtual bool Process(C_Progress &progress = C_Progress(0));
 
 protected:
   /// Compute from relative rotations the global rotations of the camera poses

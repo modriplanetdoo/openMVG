@@ -115,7 +115,7 @@ void GlobalSfMReconstructionEngine_RelativeMotions::SetTranslationAveragingMetho
   _eTranslationAveragingMethod = eTranslationAveragingMethod;
 }
 
-bool GlobalSfMReconstructionEngine_RelativeMotions::Process() {
+bool GlobalSfMReconstructionEngine_RelativeMotions::Process(C_Progress &progress) {
 
   //-------------------
   // Keep only the largest biedge connected subgraph
@@ -131,26 +131,34 @@ bool GlobalSfMReconstructionEngine_RelativeMotions::Process() {
     KeepOnlyReferencedElement(set_remainingIds, _matches_provider->_pairWise_matches);
   }
 
+  progress.restart(0);
   openMVG::rotation_averaging::RelativeRotations relatives_R;
   Compute_Relative_Rotations(relatives_R);
 
+  progress.restart(0);
   Hash_Map<IndexT, Mat3> global_rotations;
   if (!Compute_Global_Rotations(relatives_R, global_rotations))
   {
     std::cerr << "GlobalSfM:: Rotation Averaging failure!" << std::endl;
     return false;
   }
+
+  progress.restart(0);
   matching::PairWiseMatches  tripletWise_matches;
   if (!Compute_Global_Translations(global_rotations, tripletWise_matches))
   {
     std::cerr << "GlobalSfM:: Translation Averaging failure!" << std::endl;
     return false;
   }
+
+  progress.restart(0);
   if (!Compute_Initial_Structure(tripletWise_matches))
   {
     std::cerr << "GlobalSfM:: Cannot initialize an initial structure!" << std::endl;
     return false;
   }
+
+  progress.restart(0);
   if (!Adjust())
   {
     std::cerr << "GlobalSfM:: Non-linear adjustment failure!" << std::endl;

@@ -33,7 +33,7 @@ public:
   void SetFeaturesProvider(Features_Provider * provider);
   void SetMatchesProvider(Matches_Provider * provider);
 
-  virtual bool Process();
+  virtual bool Process(C_Progress &progress = C_Progress(0));
 
   void setInitialPair(const Pair & initialPair)
   {
