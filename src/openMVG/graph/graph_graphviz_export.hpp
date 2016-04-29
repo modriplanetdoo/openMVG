@@ -125,8 +125,8 @@ bool exportToGraphvizFormat_Image(
 
 template <typename GraphT>
 void exportToGraphvizData(const std::string& sfile, const GraphT & graph){
+#ifndef WIN32
   //Prepare Data
-
   std::ofstream file(sfile.c_str());
   openMVG::graph::exportToGraphvizFormat_Nodal(graph, file);
   file.close();
@@ -135,6 +135,7 @@ void exportToGraphvizData(const std::string& sfile, const GraphT & graph){
   const std::string cmd = "neato -Tsvg -O -Goverlap=scale -Gsplines=false " + sfile;
   int ret = std::system(cmd.c_str());
   (void)ret;
+#endif // WIN32
 }
 
 } // namespace graph
