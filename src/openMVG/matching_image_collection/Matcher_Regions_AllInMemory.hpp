@@ -34,14 +34,14 @@ class Matcher_Regions_AllInMemory : public Matcher
     const Pair_Set & pairs,
     matching::PairWiseMatches & map_PutativesMatches, // the pairwise photometric corresponding points
     C_Progress &my_progress_bar = C_Progress_display(0)
-  )const;
+  )const override ;
 
   private:
   // Distance ratio used to discard spurious correspondence
-  float _f_dist_ratio;
+  float f_dist_ratio_;
   // Matcher Type
-  matching::EMatcherType _eMatcherType;
+  matching::EMatcherType eMatcherType_;
 };
 
-} // namespace openMVG
 } // namespace matching_image_collection
+} // namespace openMVG 
