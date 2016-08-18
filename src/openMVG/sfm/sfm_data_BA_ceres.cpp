@@ -167,6 +167,7 @@ bool Bundle_Adjustment_Ceres::Adjust
   // Create residuals for each observation in the bundle adjustment problem. The
   // parameters for cameras and points are added automatically.
   //----------
+  openMVG::geometry::Similarity3 sim_to_center;
   double pose_center_robust_fitting_error = 0.0;
   if (sfm_data.GetViews().size() > 3)
   {
@@ -195,19 +196,21 @@ bool Bundle_Adjustment_Ceres::Adjust
 
         // Apply the found transformation to the SfM Data Scene
         openMVG::sfm::ApplySimilarity(sim, sfm_data);
+
+
+        // Move entire scene (including pose priors and control points) to center for better numerical stability
+        Vec3 pose_centroid(0.0, 0.0, 0.0);
+        for (const auto & pose_it : sfm_data.poses)
+        {
+          pose_centroid += (pose_it.second.center() / sfm_data.poses.size());
+        }
+        sim_to_center = openMVG::geometry::Similarity3(openMVG::sfm::Pose3(Mat3::Identity(), pose_centroid), 1.0);
+        openMVG::sfm::ApplySimilarity(sim_to_center, sfm_data, true);
       }
     }
   }
 
-  // Move entire scene to center for better numerical stability
-  Vec3 pose_centroid(0.0, 0.0, 0.0);
-  for (const auto & pose_it : sfm_data.poses)
-  {
-    pose_centroid += (pose_it.second.center() / sfm_data.poses.size());
-  }
 
-  openMVG::geometry::Similarity3 sim_to_center(openMVG::sfm::Pose3(Mat3::Identity(), pose_centroid), 1.0);
-  openMVG::sfm::ApplySimilarity(sim_to_center, sfm_data, true);
 
 
   ceres::Problem problem;
