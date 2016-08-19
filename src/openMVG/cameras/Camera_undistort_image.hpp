@@ -25,7 +25,7 @@ namespace cameras
 * @param[out] image_ud Output undistorted image
 * @param fillcolor color used to fill pixels where no input pixel is found
 */
-template <typename Image>
+template <typename Image, typename SamplerType = image::SamplerLinear>
 void UndistortImage(
   const Image& imageIn,
   const IntrinsicBase * cam,
@@ -39,7 +39,7 @@ void UndistortImage(
   else // There is distortion
   {
     image_ud.resize( imageIn.Width(), imageIn.Height(), true, fillcolor );
-    const image::Sampler2d<image::SamplerLinear> sampler;
+    const image::Sampler2d<SamplerType> sampler;
 #ifdef OPENMVG_USE_OPENMP
     #pragma omp parallel for
 #endif
