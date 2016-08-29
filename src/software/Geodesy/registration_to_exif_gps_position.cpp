@@ -147,8 +147,8 @@ int main(int argc, char **argv)
 
   {
     // Convert positions to the appropriate data container
-    const Mat3X X_SfM = Eigen::Map<Mat3X>(vec_sfm_center[0].data(), 3, vec_sfm_center.size());
-    const Mat3X X_GPS = Eigen::Map<Mat3X>(vec_gps_center[0].data(), 3, vec_gps_center.size());
+    const Mat X_SfM = Eigen::Map<Mat>(vec_sfm_center[0].data(), 3, vec_sfm_center.size());
+    const Mat X_GPS = Eigen::Map<Mat>(vec_gps_center[0].data(), 3, vec_gps_center.size());
 
     openMVG::geometry::Similarity3 sim;
 

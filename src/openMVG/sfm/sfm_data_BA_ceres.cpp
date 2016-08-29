@@ -194,9 +194,9 @@ bool Bundle_Adjustment_Ceres::Adjust
       // Compute the registration:
       if (X_GPS.size() > 3)
       {
-        geometry::kernel::Similarity3_Kernel kernel(
-          Eigen::Map<Mat3X>(X_SfM[0].data(),3, X_SfM.size()),
-          Eigen::Map<Mat3X>(X_GPS[0].data(),3, X_GPS.size()));
+        const Mat X_SfM_Mat = Eigen::Map<Mat>(X_SfM[0].data(),3, X_SfM.size());
+        const Mat X_GPS_Mat = Eigen::Map<Mat>(X_GPS[0].data(),3, X_GPS.size());
+        geometry::kernel::Similarity3_Kernel kernel(X_SfM_Mat, X_GPS_Mat);
         const double lmeds_median = openMVG::robust::LeastMedianOfSquares(kernel, &sim);
         if (lmeds_median != std::numeric_limits<double>::max())
         {
