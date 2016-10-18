@@ -215,12 +215,18 @@ bool Bundle_Adjustment_Ceres::Adjust
           openMVG::sfm::ApplySimilarity(sim, sfm_data);
 
           // Move entire scene to center for better numerical stability
-          Vec3 pose_centroid = Vec3::Zero();
+          Vec3 centroid = Vec3::Zero();
           for (const auto & pose_it : sfm_data.poses)
           {
-            pose_centroid += (pose_it.second.center() / (double)sfm_data.poses.size());
+            centroid += pose_it.second.center();
           }
-          sim_to_center = openMVG::geometry::Similarity3(openMVG::sfm::Pose3(Mat3::Identity(), pose_centroid), 1.0);
+          for (const auto & control_point_it : sfm_data.control_points)
+          {
+            centroid += control_point_it.second.X;
+          }
+          centroid /= (sfm_data.poses.size() + sfm_data.control_points.size());
+
+          sim_to_center = openMVG::geometry::Similarity3(openMVG::sfm::Pose3(Mat3::Identity(), centroid), 1.0);
           openMVG::sfm::ApplySimilarity(sim_to_center, sfm_data, true);
         }
       }
