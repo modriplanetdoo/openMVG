@@ -10,6 +10,7 @@
 #include "openMVG/sfm/pipelines/sfm_engine.hpp"
 #include "openMVG/sfm/pipelines/sfm_features_provider.hpp"
 #include "openMVG/sfm/pipelines/sfm_regions_provider.hpp"
+#include "openMVG/sfm/pipelines/sfm_regions_provider_cache.hpp"
 
 /// Generic Image Collection image matching
 #include "openMVG/matching_image_collection/Matcher_Regions_AllInMemory.hpp"
@@ -18,6 +19,7 @@
 #include "openMVG/matching_image_collection/F_ACRobust.hpp"
 #include "openMVG/matching_image_collection/E_ACRobust.hpp"
 #include "openMVG/matching_image_collection/H_ACRobust.hpp"
+#include "openMVG/matching_image_collection/Pair_Builder.hpp"
 #include "openMVG/matching/pairwiseAdjacencyDisplay.hpp"
 #include "openMVG/matching/indMatch_utils.hpp"
 #include "openMVG/system/timer.hpp"
@@ -378,7 +380,7 @@ int main(int argc, char **argv)
     graph::indexedGraph putativeGraph(set_ViewIds, getPairs(map_PutativesMatches));
     graph::exportToGraphvizData(
       stlplus::create_filespec(sMatchesDirectory, "putative_matches"),
-      putativeGraph.g);
+      putativeGraph);
   }
 
   //---------------------------------------
@@ -479,7 +481,7 @@ int main(int argc, char **argv)
       graph::indexedGraph putativeGraph(set_ViewIds, getPairs(map_GeometricMatches));
       graph::exportToGraphvizData(
         stlplus::create_filespec(sMatchesDirectory, "geometric_matches"),
-        putativeGraph.g);
+        putativeGraph);
     }
   }
   return EXIT_SUCCESS;

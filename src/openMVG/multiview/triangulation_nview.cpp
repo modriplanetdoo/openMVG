@@ -25,16 +25,16 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-#include "openMVG/multiview/triangulation_nview.hpp"
 #include "openMVG/multiview/projection.hpp"
+#include "openMVG/multiview/triangulation_nview.hpp"
 
 namespace openMVG {
 
   void TriangulateNView(const Mat2X &x,
     const std::vector< Mat34 > &Ps,
     Vec4 *X) {
-      Mat2X::Index nviews = x.cols();
-      assert(nviews == Ps.size());
+      const Mat2X::Index nviews = x.cols();
+      assert(static_cast<size_t>(nviews) == Ps.size());
 
       Mat design = Mat::Zero(3*nviews, 4 + nviews);
       for (int i = 0; i < nviews; i++) {
@@ -48,7 +48,7 @@ namespace openMVG {
       *X = X_and_alphas.head(4);
   }
 
-  typedef Eigen::Matrix<double, 2, 3> Mat23;
+  using Mat23 = Eigen::Matrix<double, 2, 3>;
   inline Mat23 SkewMatMinimal(const Vec2 &x) {
     Mat23 skew;
     skew <<
@@ -60,8 +60,8 @@ namespace openMVG {
   void TriangulateNViewAlgebraic(const Mat2X &x,
     const std::vector< Mat34 > &Ps,
     Vec4 *X) {
-      Mat2X::Index nviews = x.cols();
-      assert(nviews == Ps.size());
+      const Mat2X::Index nviews = x.cols();
+      assert(static_cast<size_t>(nviews) == Ps.size());
 
       Mat design(2*nviews, 4);
       for (int i = 0; i < nviews; i++) {
@@ -70,81 +70,97 @@ namespace openMVG {
       Nullspace(&design, X);
   }
 
-	double Triangulation::error(const Vec3 &X) const
-	{
-		double squared_reproj_error = 0.0;
-		for (std::size_t i=0;i<views.size();i++)
-		{
-			const Mat34& PMat = views[i].first;
-			const Vec2 & xy = views[i].second;
-			const Vec2 p = Project(PMat, X);
-			squared_reproj_error += (xy-p).norm();
-		}
-		return squared_reproj_error;
-	}
+  void Triangulation::add
+  (
+    const Mat34& projMatrix,
+    const Vec2 & p
+  )
+  {
+    views.emplace_back( projMatrix, p );
+  }
 
-	// Camera triangulation using the iterated linear method
-	Vec3 Triangulation::compute(int iter) const
-	{
-		const int nviews = int(views.size());
-		assert(nviews>=2);
+  size_t Triangulation::size() const
+  {
+    return views.size();
+  }
 
-		// Iterative weighted linear least squares
-		Mat3 AtA;
-		Vec3 Atb, X;
-		std::vector<double> weights(nviews,double(1.0));
-		for (int it=0;it<iter;++it)
-		{
-			AtA.fill(0.0);
-			Atb.fill(0.0);
-			for (int i=0;i<nviews;++i)
-			{
-				const Mat34& PMat = views[i].first;
-				const Vec2 & p = views[i].second;
-				const double w = weights[i];
+  void Triangulation::clear()
+  {
+    views.clear();
+  }
 
-				Vec3 v1,v2;
-				for (int j=0;j<3;j++)
-				{
-					v1[j] = w * ( PMat(0,j) - p(0) * PMat(2,j) );
-					v2[j] = w * ( PMat(1,j) - p(1) * PMat(2,j) );
-					Atb[j] += w * ( v1[j] * ( p(0) * PMat(2,3) - PMat(0,3) )
-            + v2[j] * ( p(1) * PMat(2,3) - PMat(1,3) ) );
-				}
+  double Triangulation::error(const Vec3 &X) const
+  {
+    double squared_reproj_error = 0.0;
+    for (std::size_t i=0;i<views.size();i++)
+    {
+      const Mat34& PMat = views[i].first;
+      const Vec2 & xy = views[i].second;
+      squared_reproj_error += (xy - Project(PMat, X)).norm();
+    }
+    return squared_reproj_error;
+  }
 
-				for (int k=0;k<3;k++)
-				{
-					for (int j=0;j<=k;j++)
-					{
-						const double v = v1[j] * v1[k] + v2[j] * v2[k];
-						AtA(j,k) += v;
-						if (j<k) AtA(k,j) += v;
-					}
-				}
-			}
+  // Camera triangulation using the iterated linear method
+  Vec3 Triangulation::compute(int iter) const
+  {
+    const int nviews = int(views.size());
+    assert(nviews>=2);
 
-			X = AtA.inverse() * Atb;
+    // Iterative weighted linear least squares
+    Mat3 AtA;
+    Vec3 Atb, X;
+    Vec weights = Vec::Constant(nviews,1.0);
+    for (int it=0;it<iter;++it)
+    {
+      AtA.fill(0.0);
+      Atb.fill(0.0);
+      for (int i=0;i<nviews;++i)
+      {
+        const Mat34& PMat = views[i].first;
+        const Vec2 & p = views[i].second;
+        const double w = weights[i];
 
-			// Compute reprojection error, min and max depth, and update weights
-			zmin = std::numeric_limits<double>::max();
-			zmax = - std::numeric_limits<double>::max();
-			err = 0;
-			for (int i=0;i<nviews;++i)
-			{
-				const Mat34& PMat = views[i].first;
-				const Vec2 & p = views[i].second;
-				const Vec3 xProj = PMat * Vec4(X(0), X(1), X(2), 1.0);
-				const double z = xProj(2);
-        const Vec2 x = xProj.head<2>() / z;
-				if (z<zmin) zmin = z;
-				if (z>zmax) zmax = z;
-				err += (p-x).norm();
-				weights[i] = 1.0 / z;
-			}
-		}
-		return X;
-	}
+        Vec3 v1, v2;
+        for (int j=0;j<3;j++)
+        {
+          v1[j] = w * ( PMat(0,j) - p(0) * PMat(2,j) );
+          v2[j] = w * ( PMat(1,j) - p(1) * PMat(2,j) );
+          Atb[j] += w * ( v1[j] * ( p(0) * PMat(2,3) - PMat(0,3) )
+                 + v2[j] * ( p(1) * PMat(2,3) - PMat(1,3) ) );
+        }
+
+        for (int k=0;k<3;k++)
+        {
+          for (int j=0;j<=k;j++)
+          {
+            const double v = v1[j] * v1[k] + v2[j] * v2[k];
+            AtA(j,k) += v;
+            if (j<k) AtA(k,j) += v;
+          }
+        }
+      }
+
+      X = AtA.inverse() * Atb;
+
+      // Compute reprojection error, min and max depth, and update weights
+      zmin = std::numeric_limits<double>::max();
+      zmax = - std::numeric_limits<double>::max();
+      err = 0.0;
+      for (int i=0;i<nviews;++i)
+      {
+        const Mat34& PMat = views[i].first;
+        const Vec2 & p = views[i].second;
+        const Vec3 xProj = PMat * X.homogeneous();
+        const double z = xProj(2);
+        if (z < zmin) zmin = z;
+        else if (z > zmax) zmax = z;
+        err += (p - xProj.hnormalized()).norm(); // residual error
+        weights[i] = 1.0 / z;
+      }
+    }
+    return X;
+  }
 
 
 }  // namespace openMVG
-

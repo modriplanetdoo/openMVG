@@ -26,9 +26,11 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-#include <vector>
 #include "openMVG/multiview/solver_homography_kernel.hpp"
+
 #include "testing/testing.h"
+
+#include <vector>
 
 using namespace std;
 using namespace openMVG;
@@ -51,7 +53,7 @@ TEST(HomographyKernelTest, Fitting_Unnormalized) {
        0, 1, 2, 0, 1, 2, 0, 1, 2;
   EuclideanToHomogeneous(x, &xh);
 
-  for (int i = 0; i < H_gt.size(); ++i) {
+  for (size_t i = 0; i < H_gt.size(); ++i) {
     // Transform points by the ground truth homography.
     Mat y, yh = H_gt[i] * xh;
     HomogeneousToEuclidean(yh, &y);
@@ -60,7 +62,11 @@ TEST(HomographyKernelTest, Fitting_Unnormalized) {
 
     size_t samples_[5]={0,1,2,3,4};
     vector<size_t> samples(samples_,samples_+5);
-    for (size_t j = 4; samples.size() < x.cols(); samples.push_back(j++)) {
+    for (
+      Mat::Index j = 4;
+      static_cast<Mat::Index>(samples.size()) < x.cols();
+      samples.push_back(j++))
+    {
       vector<Mat3> Hs;
       kernel.Fit(samples, &Hs);
       CHECK_EQUAL(1, Hs.size());
@@ -88,7 +94,7 @@ TEST(HomographyKernelTest, Fitting_Normalized) {
        0, 1, 2, 0, 1, 2, 0, 1, 2;
   EuclideanToHomogeneous(x, &xh);
 
-  for (int i = 0; i < H_gt.size(); ++i) {
+  for (size_t i = 0; i < H_gt.size(); ++i) {
     // Transform points by the ground truth homography.
     Mat y, yh = H_gt[i] * xh;
     HomogeneousToEuclidean(yh, &y);
@@ -97,7 +103,11 @@ TEST(HomographyKernelTest, Fitting_Normalized) {
 
     size_t samples_[5]={0,1,2,3,4};
     vector<size_t> samples(samples_,samples_+5);
-    for (size_t j = 4; samples.size() < x.cols(); samples.push_back(j++)) {
+    for (
+      Mat::Index j = 4;
+      static_cast<Mat::Index>(samples.size()) < x.cols();
+      samples.push_back(j++))
+    {
       vector<Mat3> Hs;
       kernel.Fit(samples, &Hs);
       CHECK_EQUAL(1, Hs.size());

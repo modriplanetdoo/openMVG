@@ -6,12 +6,15 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include "openMVG/sfm/pipelines/localization/SfM_Localizer.hpp"
-#include "openMVG/sfm/sfm_data_BA_ceres.hpp"
 
+#include "openMVG/cameras/cameras.hpp"
 #include "openMVG/multiview/solver_resection_kernel.hpp"
 #include "openMVG/multiview/solver_resection_p3p.hpp"
 #include "openMVG/robust_estimation/robust_estimator_ACRansac.hpp"
 #include "openMVG/robust_estimation/robust_estimator_ACRansacKernelAdaptator.hpp"
+#include "openMVG/sfm/sfm_data.hpp"
+#include "openMVG/sfm/sfm_data_BA_ceres.hpp"
+
 
 namespace openMVG {
 namespace sfm {
@@ -51,12 +54,15 @@ namespace sfm {
     {
       //--
       // Classic resection (try to compute the entire P matrix)
-      typedef openMVG::resection::kernel::SixPointResectionSolver SolverType;
+      using SolverType = openMVG::resection::kernel::SixPointResectionSolver;
       MINIMUM_SAMPLES = SolverType::MINIMUM_SAMPLES;
 
-      typedef openMVG::robust::ACKernelAdaptorResection<
-        SolverType, ResectionSquaredResidualError, openMVG::robust::UnnormalizerResection, Mat34>
-        KernelType;
+      using KernelType = 
+        openMVG::robust::ACKernelAdaptorResection<
+        SolverType,
+        ResectionSquaredResidualError,
+        openMVG::robust::UnnormalizerResection,
+        Mat34>;
 
       KernelType kernel(resection_data.pt2D, image_size.first, image_size.second,
         resection_data.pt3D);
@@ -70,12 +76,14 @@ namespace sfm {
     {
       //--
       // Since K calibration matrix is known, compute only [R|t]
-      typedef openMVG::euclidean_resection::P3PSolver SolverType;
+      using SolverType = openMVG::euclidean_resection::P3PSolver;
       MINIMUM_SAMPLES = SolverType::MINIMUM_SAMPLES;
 
-      typedef openMVG::robust::ACKernelAdaptorResection_K<
-        SolverType, ResectionSquaredResidualError,
-        openMVG::robust::UnnormalizerResection, Mat34>  KernelType;
+      using KernelType = 
+        openMVG::robust::ACKernelAdaptorResection_K<
+          SolverType,
+          ResectionSquaredResidualError,
+          Mat34>;
 
       KernelType kernel(resection_data.pt2D, resection_data.pt3D, pinhole_cam->K());
       // Robust estimation of the Projection matrix and it's precision
@@ -118,7 +126,7 @@ namespace sfm {
     bool b_refine_intrinsic
   )
   {
-    if ( !b_refine_pose && !b_refine_intrinsic)
+    if (!b_refine_pose && !b_refine_intrinsic)
     {
       // Nothing to do (There is no parameter to refine)
       return false;
@@ -127,11 +135,12 @@ namespace sfm {
     // Setup a tiny SfM scene with the corresponding 2D-3D data
     SfM_Data sfm_data;
     // view
-    sfm_data.views.insert( std::make_pair(0, std::make_shared<View>("",0, 0, 0)));
+    sfm_data.views.insert(std::make_pair(0, std::make_shared<View>("",0, 0, 0)));
     // pose
     sfm_data.poses[0] = pose;
-    // intrinsic (the shared_ptr does not take the ownership, will not release the input pointer)
-    sfm_data.intrinsics[0] = std::shared_ptr<cameras::IntrinsicBase>(intrinsics, [](cameras::IntrinsicBase*){});
+    // intrinsic
+    std::shared_ptr<cameras::IntrinsicBase> shared_intrinsics(intrinsics->clone());
+    sfm_data.intrinsics[0] = shared_intrinsics;
     // structure data (2D-3D correspondences)
     for (size_t i = 0; i < matching_data.vec_inliers.size(); ++i)
     {
@@ -143,7 +152,8 @@ namespace sfm {
     }
 
     // Configure BA options (refine the intrinsic and the pose parameter only if requested)
-    const Optimize_Options ba_refine_options(
+    const Optimize_Options ba_refine_options
+    (
       (b_refine_intrinsic) ? cameras::Intrinsic_Parameter_Type::ADJUST_ALL : cameras::Intrinsic_Parameter_Type::NONE,
       (b_refine_pose) ? Extrinsic_Parameter_Type::ADJUST_ALL : Extrinsic_Parameter_Type::NONE,
       Structure_Parameter_Type::NONE // STRUCTURE must remain constant
@@ -155,6 +165,8 @@ namespace sfm {
     if (b_BA_Status)
     {
       pose = sfm_data.poses[0];
+      if(b_refine_intrinsic)
+        *intrinsics = *shared_intrinsics;
     }
 
     return b_BA_Status;

@@ -5,10 +5,11 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-#include "openMVG/sfm/sfm_data_filters.hpp"
 #include "openMVG/sfm/sfm.hpp"
+#include "openMVG/sfm/sfm_data_filters.hpp"
 #include "openMVG/stl/stl.hpp"
 #include "openMVG/tracks/union_find.hpp"
+
 #include <iterator>
 
 namespace openMVG {
@@ -247,7 +248,6 @@ bool IsTracksOneCC
     itLandmarks != landmarks.end(); ++itLandmarks)
   {
     const Observations & obs = itLandmarks->second.obs;
-    std::set<IndexT> id_to_link;
     for (Observations::const_iterator itObs = obs.begin();
       itObs != obs.end(); ++itObs)
     {
@@ -305,7 +305,6 @@ void KeepLargestViewCCTracks
       itLandmarks != landmarks.end(); ++itLandmarks)
     {
       const Observations & obs = itLandmarks->second.obs;
-      std::set<IndexT> id_to_link;
       for (Observations::const_iterator itObs = obs.begin();
         itObs != obs.end(); ++itObs)
       {

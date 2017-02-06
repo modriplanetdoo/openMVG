@@ -147,15 +147,13 @@ int main() {
     {
       std::vector<size_t> vec_inliers;
 
-      // Use the 8 point solver in order to estimate E
-      typedef openMVG::spherical_cam::EssentialKernel_spherical Kernel;
-
       // Define the AContrario angular error adaptor
-      typedef openMVG::robust::ACKernelAdaptor_AngularRadianError<
+      using KernelType = 
+        openMVG::robust::ACKernelAdaptor_AngularRadianError<
+          // Use the 8 point solver in order to estimate E
           openMVG::spherical_cam::EightPointRelativePoseSolver,
           openMVG::spherical_cam::AngularError,
-          Mat3>
-          KernelType;
+          Mat3>;
 
       KernelType kernel(xL_spherical, xR_spherical);
 
@@ -165,7 +163,6 @@ int main() {
       const std::pair<double,double> ACRansacOut =
         ACRANSAC(kernel, vec_inliers, 1024, &E, precision, true);
       const double & threshold = ACRansacOut.first;
-      const double & NFA = ACRansacOut.second;
 
       std::cout << "\n Angular threshold found: " << R2D(threshold) << "(Degree)"<<std::endl;
       std::cout << "\n #Putatives/#inliers : " << xL_spherical.cols() << "/" << vec_inliers.size() << "\n" << std::endl;

@@ -7,20 +7,26 @@
 
 #include "openMVG/sfm/pipelines/sfm_robust_model_estimation.hpp"
 
-#include "openMVG/multiview/solver_essential_kernel.hpp"
 #include "openMVG/multiview/projection.hpp"
+#include "openMVG/multiview/solver_essential_kernel.hpp"
 #include "openMVG/multiview/triangulation.hpp"
-
 #include "openMVG/robust_estimation/robust_estimator_ACRansac.hpp"
 #include "openMVG/robust_estimation/robust_estimator_ACRansacKernelAdaptator.hpp"
 
 namespace openMVG {
 namespace sfm {
 
-bool estimate_Rt_fromE(const Mat3 & K1, const Mat3 & K2,
-  const Mat & x1, const Mat & x2,
-  const Mat3 & E, const std::vector<size_t> & vec_inliers,
-  Mat3 * R, Vec3 * t)
+bool estimate_Rt_fromE
+(
+  const Mat3 & K1,
+  const Mat3 & K2,
+  const Mat & x1,
+  const Mat & x2,
+  const Mat3 & E,
+  const std::vector<size_t> & vec_inliers,
+  Mat3 * R,
+  Vec3 * t
+)
 {
   // Accumulator to find the best solution
   std::vector<size_t> f(4, 0);
@@ -76,23 +82,23 @@ bool estimate_Rt_fromE(const Mat3 & K1, const Mat3 & K2,
 
 using namespace openMVG::robust;
 
-bool robustRelativePose(
+bool robustRelativePose
+(
   const Mat3 & K1, const Mat3 & K2,
   const Mat & x1, const Mat & x2,
   RelativePose_Info & relativePose_info,
   const std::pair<size_t, size_t> & size_ima1,
   const std::pair<size_t, size_t> & size_ima2,
-  const size_t max_iteration_count)
+  const size_t max_iteration_count
+)
 {
   // Use the 5 point solver to estimate E
-  typedef openMVG::essential::kernel::FivePointKernel SolverType;
+  using SolverType = openMVG::essential::kernel::FivePointKernel;
   // Define the AContrario adaptor
-  typedef ACKernelAdaptorEssential<
+  using KernelType = ACKernelAdaptorEssential<
       SolverType,
       openMVG::fundamental::kernel::EpipolarDistanceError,
-      UnnormalizerT,
-      Mat3>
-      KernelType;
+      Mat3>;
 
   KernelType kernel(x1, size_ima1.first, size_ima1.second,
                     x2, size_ima2.first, size_ima2.second, K1, K2);

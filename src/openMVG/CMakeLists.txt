@@ -4,6 +4,7 @@ ADD_SUBDIRECTORY(features)
 ADD_SUBDIRECTORY(graph)
 ADD_SUBDIRECTORY(image)
 ADD_SUBDIRECTORY(linearProgramming)
+ADD_SUBDIRECTORY(geodesy)
 ADD_SUBDIRECTORY(geometry)
 ADD_SUBDIRECTORY(matching)
 ADD_SUBDIRECTORY(matching_image_collection)
@@ -17,7 +18,7 @@ ADD_SUBDIRECTORY(sfm)
 ADD_SUBDIRECTORY(stl)
 
 #INSTALL RULES
-INSTALL(
+install(
   DIRECTORY .
   DESTINATION include/openMVG
   COMPONENT headers

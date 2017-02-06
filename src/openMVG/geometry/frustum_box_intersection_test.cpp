@@ -4,18 +4,19 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-#include "openMVG/geometry/half_space_intersection.hpp"
-#include "openMVG/geometry/frustum.hpp"
 #include "openMVG/geometry/box.hpp"
-
-#include "openMVG/multiview/test_data_sets.hpp"
+#include "openMVG/geometry/frustum.hpp"
+#include "openMVG/geometry/half_space_intersection.hpp"
 #include "openMVG/multiview/projection.hpp"
+#include "openMVG/multiview/test_data_sets.hpp"
 
 #include "CppUnitLite/TestHarness.h"
 #include "testing/testing.h"
-#include <iostream>
-#include <fstream>
+
 #include <Eigen/Geometry>
+
+#include <fstream>
+#include <iostream>
 
 using namespace openMVG;
 using namespace openMVG::geometry;
@@ -58,7 +59,6 @@ TEST(box_frustum, intersection)
 
   // Test with infinite Frustum for each camera
   {
-    std::vector<Frustum> vec_frustum;
     for (int i=0; i < iNviews; ++i)
     {
       const Frustum f (principal_Point*2, principal_Point*2, d._K[i], d._R[i], d._C[i]);

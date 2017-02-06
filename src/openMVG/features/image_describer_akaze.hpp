@@ -7,18 +7,19 @@
 #ifndef OPENMVG_FEATURES_AKAZE_IMAGE_DESCRIBER_HPP
 #define OPENMVG_FEATURES_AKAZE_IMAGE_DESCRIBER_HPP
 
+
+#include "openMVG/features/akaze/AKAZE.hpp"
+#include "openMVG/features/akaze/mldb_descriptor.hpp"
+#include "openMVG/features/akaze/msurf_descriptor.hpp"
+#include "openMVG/features/image_describer.hpp"
+#include "openMVG/features/liop/liop_descriptor.hpp"
+#include "openMVG/features/regions_factory.hpp"
+
+#include <cereal/cereal.hpp>
+
 #include <iostream>
 #include <numeric>
 
-#include "openMVG/features/image_describer.hpp"
-#include "openMVG/features/regions_factory.hpp"
-#include "openMVG/features/akaze/AKAZE.hpp"
-#include "openMVG/features/akaze/msurf_descriptor.hpp"
-#include "openMVG/features/akaze/mldb_descriptor.hpp"
-#include "openMVG/features/liop/liop_descriptor.hpp"
-#include <cereal/cereal.hpp>
-
-using namespace std;
 
 namespace openMVG {
 namespace features {
@@ -283,5 +284,6 @@ private:
 #include <cereal/types/polymorphic.hpp>
 #include <cereal/archives/json.hpp>
 CEREAL_REGISTER_TYPE_WITH_NAME(openMVG::features::AKAZE_Image_describer, "AKAZE_Image_describer");
+CEREAL_REGISTER_POLYMORPHIC_RELATION(openMVG::features::Image_describer, openMVG::features::AKAZE_Image_describer)
 
 #endif // OPENMVG_FEATURES_AKAZE_IMAGE_DESCRIBER_HPP

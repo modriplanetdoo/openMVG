@@ -12,6 +12,7 @@
 
 #include "openMVG/sfm/pipelines/global/GlobalSfM_rotation_averaging.hpp"
 #include "openMVG/sfm/pipelines/global/GlobalSfM_translation_averaging.hpp"
+
 #include "third_party/htmlDoc/htmlDoc.hpp"
 
 namespace openMVG{
@@ -84,8 +85,6 @@ private:
   //-- Data provider
   Features_Provider  * features_provider_;
   Matches_Provider  * matches_provider_;
-
-  std::shared_ptr<Features_Provider> normalized_features_provider_;
 };
 
 } // namespace sfm
