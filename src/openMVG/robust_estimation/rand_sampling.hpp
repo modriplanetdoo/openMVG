@@ -12,6 +12,10 @@
 #include <random>
 #include <vector>
 
+#ifdef _MSC_VER
+#include <stdint.h>
+#endif
+
 namespace openMVG {
 namespace robust{
 
