@@ -5,10 +5,12 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-#pragma once
+#ifndef OPENMVG_SFM_SFM_ENGINE_HPP
+#define OPENMVG_SFM_SFM_ENGINE_HPP
 
-#include "openMVG/sfm/sfm_data.hpp"
 #include "openMVG/cameras/Camera_Common.hpp"
+#include "openMVG/sfm/sfm_data.hpp"
+
 #include <string>
 
 #include "third_party/progress/progress.hpp"
@@ -77,3 +79,5 @@ protected:
 
 } // namespace sfm
 } // namespace openMVG
+
+#endif // OPENMVG_SFM_SFM_ENGINE_HPP

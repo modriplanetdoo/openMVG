@@ -4,7 +4,8 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-#pragma once
+#ifndef OPENMVG_SFM_SFM_VIEW_PRIORS_HPP
+#define OPENMVG_SFM_SFM_VIEW_PRIORS_HPP
 
 #include "openMVG/geometry/pose3.hpp"
 #include "openMVG/numeric/numeric.h"
@@ -13,6 +14,8 @@
 
 namespace openMVG {
 namespace sfm {
+
+struct View;
 
 using namespace openMVG::geometry;
 
@@ -174,12 +177,12 @@ struct ViewPriors : public View
   // Pose center prior
   bool b_use_pose_center_ = false; // Tell if the pose prior must be used
   Vec3 center_weight_ = Vec3(1.0,1.0,1.0);
-  Vec3 pose_center_;
+  Vec3 pose_center_ = Vec3::Zero();
 
   // Pose rotation prior
   bool b_use_pose_rotation_ = false; // Tell if the rotation prior must be used
   double rotation_weight_ = 1.0;
-  Mat3 pose_rotation_;
+  Mat3 pose_rotation_ = Mat3::Identity();
 
   // Pose prior sensor transformation
   // Transformation from view to pose's center and rotation sensor (lever arm)
@@ -191,3 +194,5 @@ struct ViewPriors : public View
 
 CEREAL_REGISTER_TYPE_WITH_NAME( openMVG::sfm::ViewPriors, "view_priors" );
 CEREAL_REGISTER_POLYMORPHIC_RELATION(openMVG::sfm::View, openMVG::sfm::ViewPriors);
+
+#endif // OPENMVG_SFM_SFM_VIEW_PRIORS_HPP
