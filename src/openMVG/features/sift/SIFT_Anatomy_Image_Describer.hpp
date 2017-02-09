@@ -56,6 +56,7 @@ Changes are:
 
 #include <iostream>
 #include <numeric>
+#include <memory>
 
 
 namespace openMVG {
@@ -102,11 +103,18 @@ public:
     bool root_sift_;        // see [1]
   };
 
+  class Filter
+  {
+    public:
+      virtual bool operator()(size_t total_keys, std::vector<sift::Keypoint> &current_keys) { return true; }
+  };
+
   SIFT_Anatomy_Image_describer
   (
-    const Params params = Params()
+    const Params params = Params(),
+    const std::shared_ptr<Filter> &filter = std::make_shared<Filter>()
   )
-  :Image_describer(), params_(params)
+  :Image_describer(), params_(params), filter_(filter)
   {}
 
   bool Set_configuration_preset(EDESCRIBER_PRESET preset) override
@@ -170,7 +178,8 @@ public:
       std::vector<Keypoint> keypoints;
       keypoints.reserve(5000);
       Octave octave;
-      while ( octave_gen.NextOctave( octave ) )
+      bool has_next = true;
+      while ( has_next && octave_gen.NextOctave( octave ) )
       {
         std::vector< Keypoint > keys;
         // Find Keypoints
@@ -178,9 +187,14 @@ public:
           params_.peak_threshold_ / octave_gen.NbSlice(),
           params_.edge_threshold_);
         keypointDetector(octave, keys);
+
+        has_next &= (*filter_)(keypoints.size(), keys);
+
         // Find Keypoints orientation and compute their description
         Sift_DescriptorExtractor descriptorExtractor;
         descriptorExtractor(octave, keys);
+
+        has_next &= (*filter_)(keypoints.size(), keys);
 
         // Concatenate the found keypoints
         std::move(keys.begin(), keys.end(), std::back_inserter(keypoints));
@@ -220,6 +234,7 @@ public:
 
 private:
   Params params_;
+  std::shared_ptr<Filter> filter_;
 };
 
 } // namespace features
