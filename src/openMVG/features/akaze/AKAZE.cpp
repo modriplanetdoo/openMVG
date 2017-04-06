@@ -195,8 +195,9 @@ void convert_scale(Image &src)
 AKAZE::AKAZE
 (
   const Image<unsigned char> & in,
-  const AKAZE::Params & options
-):options_(options)
+  const AKAZE::Params & options,
+  const std::shared_ptr<Filter> &filter
+):options_(options), filter_(filter)
 {
   in_ = in.GetMat().cast<float>() / 255.f;
   options_.fDesc_factor = std::max(6.f*sqrtf(2.f), options_.fDesc_factor);
@@ -269,17 +270,21 @@ void AKAZE::Feature_Detection(std::vector<AKAZEKeypoint>& kpts) const
 {
   std::vector< std::vector< std::pair<AKAZEKeypoint, bool> > > vec_kpts_perSlice(options_.iNbOctave*options_.iNbSlicePerOctave);
 
-#ifdef OPENMVG_USE_OPENMP
-#pragma omp parallel for schedule(dynamic)
-#endif
-  for( int p = 0 ; p < options_.iNbOctave ; ++p )
+  bool has_next = true;
+  for( int p = 0 ; p < options_.iNbOctave && has_next ; ++p )
   {
     const float ratio = (float) (1 << p);
 
-    for( int q = 0 ; q < options_.iNbSlicePerOctave ; ++q )
+#ifdef OPENMVG_USE_OPENMP
+#pragma omp parallel for schedule(dynamic) shared(has_next) ordered
+#endif
+    for( int q = 0 ; q < options_.iNbSlicePerOctave ; ++q)
     {
+      if (!has_next) continue;
+
+      int k = q + p * options_.iNbSlicePerOctave;
       const float sigma_cur = Sigma( options_.fSigma0 , p , q , options_.iNbSlicePerOctave ) ;
-      const Image<float> & LDetHess = evolution_[options_.iNbSlicePerOctave * p + q].Lhess;
+      const Image<float> & LDetHess = evolution_[k].Lhess;
 
       // Check that the point is under the image limits for the descriptor computation
       const float borderLimit =
@@ -308,19 +313,25 @@ void AKAZE::Feature_Detection(std::vector<AKAZEKeypoint>& kpts) const
           point.x = ix * ratio + 0.5 * (ratio-1);
           point.y = jx * ratio + 0.5 * (ratio-1);
           point.angle = 0.0f;
-          point.class_id = p * options_.iNbSlicePerOctave + q;
-          vec_kpts_perSlice[options_.iNbOctave * p + q].emplace_back( point,false );
+          point.class_id = k;
+          vec_kpts_perSlice[k].emplace_back(point, false);
         }
       }
-    }
-  }
 
-  //-- Filter duplicates
-  detectDuplicates(vec_kpts_perSlice[0], vec_kpts_perSlice[0]);
-  for (size_t k = 1; k < vec_kpts_perSlice.size(); ++k)
-  {
-    detectDuplicates(vec_kpts_perSlice[k], vec_kpts_perSlice[k]);    // detect inter scale duplicates
-    detectDuplicates(vec_kpts_perSlice[k-1], vec_kpts_perSlice[k]);  // detect duplicates using previous octave
+#pragma omp ordered
+      if (has_next) // check if previous iteration did not stop the process
+      {
+        detectDuplicates(vec_kpts_perSlice[k], vec_kpts_perSlice[k]);       // detect inter scale duplicates
+        if (k > 0)
+          detectDuplicates(vec_kpts_perSlice[k - 1], vec_kpts_perSlice[k]); // detect duplicates using previous octave
+
+        has_next = (*filter_)(k, vec_kpts_perSlice);
+      }
+      else
+      {
+        vec_kpts_perSlice[k].clear();
+      }
+    }
   }
 
   // Keep only the one marked as not duplicated

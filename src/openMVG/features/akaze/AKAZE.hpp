@@ -104,16 +104,22 @@ public:
     float fDesc_factor;   ///< Magnifier used to describe an interest point
   };
 
+  class Filter {
+  public:
+	  virtual bool operator()(int class_id, std::vector<std::vector<std::pair<AKAZEKeypoint, bool>>> &current_keys) { return true; }
+  };
+
 private:
 
-  Params options_;               ///< Configuration options for AKAZE
-  std::vector<TEvolution> evolution_;	///< Vector of nonlinear diffusion evolution (Scale Space)
+  Params options_;                    ///< Configuration options for AKAZE
+  std::shared_ptr<Filter> filter_;    ///< Filter for reducing number of detected features
+  std::vector<TEvolution> evolution_; ///< Vector of nonlinear diffusion evolution (Scale Space)
   image::Image<float> in_;            ///< Input image
 
 public:
 
   /// Constructor
-  AKAZE(const image::Image<unsigned char> & in, const Params & options);
+  AKAZE(const image::Image<unsigned char> & in, const Params & options, const std::shared_ptr<Filter> &filter = std::make_shared<Filter>());
 
   /// Compute the AKAZE non linear diffusion scale space per slice
   void Compute_AKAZEScaleSpace(void);

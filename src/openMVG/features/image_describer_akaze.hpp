@@ -39,8 +39,9 @@ public:
   {
     Params(
       const features::AKAZE::Params config = features::AKAZE::Params(),
-      EAKAZE_DESCRIPTOR eAkazeDescriptor = AKAZE_MSURF
-    ):options_(config), eAkazeDescriptor_(eAkazeDescriptor){}
+      EAKAZE_DESCRIPTOR eAkazeDescriptor = AKAZE_MSURF,
+      const std::shared_ptr<features::AKAZE::Filter> &filter = std::make_shared<features::AKAZE::Filter>()
+    ):options_(config), eAkazeDescriptor_(eAkazeDescriptor), filter_(filter) {}
 
     template<class Archive>
     void serialize(Archive & ar)
@@ -50,6 +51,7 @@ public:
 
     // Parameters
     features::AKAZE::Params options_;
+    std::shared_ptr<features::AKAZE::Filter> filter_;
     EAKAZE_DESCRIPTOR eAkazeDescriptor_;
   };
 
@@ -97,7 +99,7 @@ public:
       params_.eAkazeDescriptor_ == AKAZE_LIOP) ? 10.f*sqrtf(2.f)
       : 11.f*sqrtf(2.f); // MLDB
 
-    AKAZE akaze(image, params_.options_);
+    AKAZE akaze(image, params_.options_, params_.filter_);
     akaze.Compute_AKAZEScaleSpace();
     std::vector<AKAZEKeypoint> kpts;
     kpts.reserve(5000);
