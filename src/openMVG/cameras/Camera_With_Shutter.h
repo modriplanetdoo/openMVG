@@ -46,8 +46,8 @@ public:
     const Vec3 &X,
     const Vec2 &x) const
   {
-    geometry::Pose3 pose_tmp = pose_motion_.pose(pose, shutter_model_->getMotionFactor(x));
-    return Pinhole_Intrinsic::residual(pose_tmp, X, x);
+    const Vec2 proj = this->project(pose, X, shutter_model_->getMotionFactor(x));
+    return x - proj;
   }
 
   Vec2 project(
