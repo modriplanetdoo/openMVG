@@ -4,7 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-#include "openMVG/cameras/Camera_With_Shutter.h"
+#include "openMVG/cameras/cameras.hpp"
 
 using namespace openMVG;
 using namespace openMVG::cameras;
@@ -79,7 +79,7 @@ TEST(Shutter_Camera, RollingShutter_Projection) {
   geometry::PoseMotion pose_motion(R_motion, (C_motion).eval());
 
   std::shared_ptr<cameras::AbstractShutterModel> shutter_model = std::make_shared<cameras::RollingShutter>(im_w, im_h);
-  const ShutterCamera cam(shutter_model, pose_motion, im_w, im_h, im_f, im_w / 2.0, im_h / 2.0);
+  const ShutterCamera<cameras::Pinhole_Intrinsic_Radial_K3> cam(shutter_model, pose_motion, im_w, im_h, im_f, im_w / 2.0, im_h / 2.0, 0.01, 0.03, 0.3);
 
 
   for (int i = 0; i < 10; ++i)

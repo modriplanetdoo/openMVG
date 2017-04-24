@@ -17,10 +17,8 @@ namespace openMVG
 namespace cameras
 {
 
-// TODO:
-// template <class T>
-// class ShutterCamera : public T // T should inherit from cameras::Pinhole_Intrinsic
-class ShutterCamera : public cameras::Pinhole_Intrinsic
+template <class T = cameras::Pinhole_Intrinsic>
+class ShutterCamera : public T
 {
   using ShutterModel = std::shared_ptr<cameras::AbstractShutterModel>;
 
@@ -31,11 +29,9 @@ private:
   geometry::PoseMotion pose_motion_;
 
 public:
-  ShutterCamera(const ShutterModel &shutter_model, const geometry::PoseMotion &pose_motion,
-                    unsigned int w = 0, unsigned int h = 0,
-                    double focal_length_pix = 0.0,
-                    double ppx = 0.0, double ppy = 0.0 )
-  : cameras::Pinhole_Intrinsic( w, h, focal_length_pix, ppx, ppy )
+  template <class... Args>
+  ShutterCamera(const ShutterModel &shutter_model, const geometry::PoseMotion &pose_motion, Args&&... args)
+  : T(std::forward<Args>(args)...)
   , shutter_model_(shutter_model), pose_motion_(pose_motion)
   {
     // nothing to do
