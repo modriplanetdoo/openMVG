@@ -13,6 +13,7 @@
 #include "openMVG/cameras/Camera_Pinhole_Radial.hpp"
 #include "openMVG/cameras/Camera_Pinhole_Brown.hpp"
 #include "openMVG/cameras/Camera_Pinhole_Fisheye.hpp"
+#include "openMVG/cameras/Camera_With_Shutter.h"
 #include "openMVG/cameras/Camera_undistort_image.hpp"
 
 namespace openMVG

@@ -74,6 +74,10 @@ struct IntrinsicBase : public Clonable<IntrinsicBase>
     return h_;
   }
 
+  // --
+  // Virtual members
+  // --
+
   /**
   * @brief Compute projection of a 3D point into the camera plane
   * (Apply pose, disto (if any) and Intrinsics)
@@ -81,7 +85,7 @@ struct IntrinsicBase : public Clonable<IntrinsicBase>
   * @param pt3D 3D-point to project on camera plane
   * @return Projected (2D) point on camera plane
   */
-  Vec2 project(
+  virtual Vec2 project(
     const geometry::Pose3 & pose,
     const Vec3 & pt3D ) const
   {
@@ -103,7 +107,7 @@ struct IntrinsicBase : public Clonable<IntrinsicBase>
   * @param x image observation
   * @brief Relative 2d distance between projected and observed points
   */
-  Vec2 residual(
+  virtual Vec2 residual(
     const geometry::Pose3 & pose,
     const Vec3 & X,
     const Vec2 & x ) const
@@ -111,10 +115,6 @@ struct IntrinsicBase : public Clonable<IntrinsicBase>
     const Vec2 proj = this->project( pose, X );
     return x - proj;
   }
-
-  // --
-  // Virtual members
-  // --
 
   /**
   * @brief Tell from which type the embed camera is

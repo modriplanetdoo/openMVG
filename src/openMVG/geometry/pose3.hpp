@@ -1,4 +1,4 @@
-// Copyright (c) 2015 Pierre MOULON.
+﻿// Copyright (c) 2015 Pierre MOULON.
 
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -177,6 +177,41 @@ class Pose3
       center_ = Eigen::Map<const Vec3>( &vec[0] );
     }
 };
+
+/**
+* @brief Defines a pose with motion in 3d space
+* [R(t)|C(t)]
+*
+* where:
+* R(t) = R0 · λ ∆R
+* c(t) = c0 + λ ∆c
+* λ ∈ [−1, +1]
+*/
+class PoseMotion {
+private:
+  AngleAxis incremental_rotation_;
+  Vec3 incremental_translation_;
+
+public:
+  PoseMotion(const AngleAxis &incremental_rotation, const Vec3 &incremental_translation)
+    : incremental_rotation_(incremental_rotation), incremental_translation_(incremental_translation)
+  {
+    // nothing to do
+  }
+
+  Mat3 rotation(const Pose3 &pose, double motion_factor) const {
+    return pose.rotation() * AngleAxis(motion_factor * incremental_rotation_.angle(), incremental_rotation_.axis()).toRotationMatrix();
+  }
+
+  Vec3 center(const Pose3 &pose, double motion_factor) const {
+    return pose.center() + (incremental_translation_ * motion_factor);
+  }
+
+  Pose3 pose(const Pose3 &pose, double motion_factor) const {
+    return Pose3(rotation(pose, motion_factor), center(pose, motion_factor));
+  }
+};
+
 } // namespace geometry
 } // namespace openMVG
 

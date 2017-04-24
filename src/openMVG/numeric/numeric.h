@@ -83,13 +83,16 @@ using Vec2i = Eigen::Vector2i;
 using Vec2f = Eigen::Vector2f;
 
 /// 3d vector using float internal format
-using Vec3f =Eigen::Vector3f;
+using Vec3f = Eigen::Vector3f;
 
 /// 9d vector using double internal format
 using Vec9 = Eigen::Matrix<double, 9, 1>;
 
 /// Quaternion type
 using Quaternion = Eigen::Quaternion<double>;
+
+/// Angle axis type
+using AngleAxis = Eigen::AngleAxis<double>;
 
 /// 3x3 matrix using double internal format
 using Mat3 = Eigen::Matrix<double, 3, 3>;
