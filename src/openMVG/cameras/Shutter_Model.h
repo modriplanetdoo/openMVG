@@ -14,6 +14,10 @@ namespace openMVG
 namespace cameras
 {
 
+/**
+* @brief `AbstractShutterModel` is a base class for different types of shutter. It's main responsibility is to model how data is read for sensor.
+* This is important since not all sensor types read data from every pixel at the same time. This model aims to map from pixel position to time factor when pixel data was read from sensor.
+*/
 class AbstractShutterModel {
 
 public:
@@ -22,7 +26,7 @@ public:
   }
 
   /**
-  * @brief Get the motion factor for PoseMotion
+  * @brief Get the motion factor for PoseMotion. `-1` represents the time when sensor starts the read-out and `+1` when the sensor is done with reading from sensor.
   * @return Motion factor [-1, +1]
   */
   virtual double getMotionFactor(const openMVG::Vec2 &x) const = 0;
@@ -44,7 +48,7 @@ public:
   }
 
   virtual double getMotionFactor(const openMVG::Vec2 &x) const override {
-    double row = x(1);
+    const double row = x(1);
 
     return row / h_ * 2 - 1;
   }

@@ -69,7 +69,7 @@ class Pose3
 
     /**
     * @brief Get center of rotation
-    * @return center of rotation
+    * @return Center of rotation
     */
     const Vec3& center() const
     {
@@ -178,14 +178,29 @@ class Pose3
     }
 };
 
+
+
+//------------------
+//-- Bibliography --
+//------------------
+//- [1] "Photogrammetric Accuracy and Modeling of Rolling Shutter Cameras."
+//- Authors: Jonas Vautherin, Simon Rutishauser, Klaus Schneider-Zapp, Hon Fai Choi Venera Chovancova, Alexis Glass, Christoph Strecha.
+//- Date: June 2016.
+//- Publication : ISPRS Annals of Photogrammetry, Remote Sensing and Spatial Information Sciences, Volume III-3, 2016, pp.139-146.
+//------
+
 /**
-* @brief Defines a pose with motion in 3d space
-* [R(t)|C(t)]
+* @brief Defines a pose motion in 3D space. The amount of motion applied depends on `motion_factor`.
+* `motion_factor` of `0` means that there is no motion to be applied.
 *
+* Well known pinhole camera matrix `[R|C]` is here considere to be more like `[R(t)|C(t)]`.
 * where:
-* R(t) = R0 · λ ∆R
-* c(t) = c0 + λ ∆c
-* λ ∈ [−1, +1]
+* > R(t) = R0 · λ ∆R
+* > c(t) = c0 + λ ∆c
+* > λ ∈ [−1, +1]
+*
+* Note:
+* - All rotations and translations are in world frame
 */
 class PoseMotion {
 private:

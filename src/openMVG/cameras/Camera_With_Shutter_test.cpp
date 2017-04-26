@@ -4,7 +4,9 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-#include "openMVG/cameras/cameras.hpp"
+#include "openMVG/cameras/Camera_Pinhole_Radial.hpp"
+#include "openMVG/cameras/Camera_With_Shutter.h"
+#include "openMVG/cameras/Shutter_Model.h"
 
 using namespace openMVG;
 using namespace openMVG::cameras;
@@ -20,7 +22,6 @@ TEST(RollingShutter, getMotionFactor) {
     EXPECT_EQ(shutter.getMotionFactor(Vec2(0, 1000)), +1.0);
 }
 
-
 TEST(GlobalShutter, getMotionFactor) {
     cameras::GlobalShutter shutter(1000, 1000);
 
@@ -34,7 +35,6 @@ TEST(PoseMotion, center) {
 
     geometry::Pose3 pose;
     geometry::PoseMotion pose_motion(AngleAxis(), (Vec3(0, 0, 1)).eval());
-
 
     EXPECT_MATRIX_NEAR(pose_motion.center(pose, 0), pose.center(), epsilon);
 
