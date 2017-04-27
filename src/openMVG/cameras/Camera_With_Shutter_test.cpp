@@ -7,12 +7,19 @@
 #include "openMVG/cameras/Camera_Pinhole_Radial.hpp"
 #include "openMVG/cameras/Camera_With_Shutter.h"
 #include "openMVG/cameras/Shutter_Model.h"
+#include "openMVG/geometry/Similarity3.hpp"
 
 using namespace openMVG;
 using namespace openMVG::cameras;
 
 #include "testing/testing.h"
 
+
+#define EXPECT_POSE_NEAR(a, b, tolerance) \
+do { \
+  EXPECT_MATRIX_NEAR(a.center(), b.center(), tolerance) \
+  EXPECT_MATRIX_NEAR(a.rotation(), b.rotation(), tolerance); \
+} while(false);
 
 TEST(RollingShutter, getMotionFactor) {
     cameras::RollingShutter shutter(1000, 1000);
@@ -45,19 +52,67 @@ TEST(PoseMotion, center) {
 TEST(PoseMotion, rotation) {
     const double epsilon = 1e-5;
 
-
     for (int i = 0; i < 10; ++i)
     {
       // generate pose with random rotation
       Vec4 random = Vec4::Random();
 
-      geometry::Pose3 pose(AngleAxis(random(0), random.tail<3>()).toRotationMatrix(), Vec3()); // with random rotation
+      geometry::Pose3 pose(AngleAxis(random(0), random.tail<3>().normalized()).toRotationMatrix(), Vec3()); // with random rotation
       geometry::PoseMotion pose_motion(AngleAxis(D2R(90), Vec3::UnitZ()), (Vec3(0, 0, 0)).eval()); // rotate 90°
 
       EXPECT_MATRIX_NEAR(pose_motion.rotation(pose, 0), (pose.rotation() * Mat3::Identity()).eval(), epsilon);
 
       EXPECT_MATRIX_NEAR(pose_motion.rotation(pose, -1), (pose.rotation() * (Mat3() << -Vec3::UnitY(),  Vec3::UnitX(), Vec3::UnitZ()).finished()), epsilon);
       EXPECT_MATRIX_NEAR(pose_motion.rotation(pose, +1), (pose.rotation() * (Mat3() <<  Vec3::UnitY(), -Vec3::UnitX(), Vec3::UnitZ()).finished()), epsilon);
+    }
+}
+
+// Testing PoseMotion::pose(const Pose3 &, double) function
+TEST(PoseMotion, pose) {
+    const double epsilon = 1e-5;
+
+    for (int i = 0; i < 10; ++i)
+    {
+      // generate pose with random rotation
+      Vec4 random_1 = Vec4::Random();
+      Vec4 random_2 = Vec4::Random();
+
+      geometry::Pose3 pose(AngleAxis(random_1(0), random_1.tail<3>().normalized()).toRotationMatrix(), Vec3()); // with random rotation
+      geometry::PoseMotion pose_motion(AngleAxis(D2R(random_2(0) * 180), random_2.tail<3>().normalized()), (Vec3::Random() * 10).eval()); // random pose motion
+
+      // test rotation
+      EXPECT_MATRIX_NEAR(pose_motion.pose(pose,  0).rotation(), pose_motion.rotation(pose,  0), epsilon);
+      EXPECT_MATRIX_NEAR(pose_motion.pose(pose, -1).rotation(), pose_motion.rotation(pose, -1), epsilon);
+      EXPECT_MATRIX_NEAR(pose_motion.pose(pose, +1).rotation(), pose_motion.rotation(pose, +1), epsilon);
+
+      // test center
+      EXPECT_MATRIX_NEAR(pose_motion.pose(pose,  0).center(), pose_motion.center(pose,  0), epsilon);
+      EXPECT_MATRIX_NEAR(pose_motion.pose(pose, -1).center(), pose_motion.center(pose, -1), epsilon);
+      EXPECT_MATRIX_NEAR(pose_motion.pose(pose, +1).center(), pose_motion.center(pose, +1), epsilon);
+    }
+}
+
+// Testing Similarity::operator () (const PoseMotion &) function
+TEST(PoseMotion, transform) {
+    const double epsilon = 1e-5;
+
+    for (int i = 0; i < 1; ++i)
+    {
+      // generate random similarity, pose and pose_motion
+      Vec4 random_1 = Vec4::Random();
+      Vec4 random_2 = Vec4::Random();
+      Vec6 random_3 = Vec6::Random();
+
+      geometry::Similarity3 similarity(geometry::Pose3(AngleAxis(D2R(random_3(0) * 180), random_3.segment<3>(1).normalized()).toRotationMatrix(), (Vec3::Random() * 100).eval()), random_3(4) + 1.01);
+
+      geometry::Pose3 pose(AngleAxis(D2R(random_1(0) * 180), random_1.tail<3>().normalized()).toRotationMatrix(), Vec3::Random() * 300); // with random rotation
+      geometry::PoseMotion pose_motion(AngleAxis(D2R(random_2(0) * 180), random_2.tail<3>().normalized()), (Vec3::Random() * 10).eval()); // random pose motion
+
+      // applying pose_motion to a pose first and then transfroming should yield same results as
+      // transforming both pose_motion and pose and then applying transformed_pose_motion to transfromed_pose
+      EXPECT_POSE_NEAR(similarity(pose_motion.pose(pose,  0)), similarity(pose_motion).pose(similarity(pose), 0), epsilon);
+      EXPECT_POSE_NEAR(similarity(pose_motion.pose(pose, -1)), similarity(pose_motion).pose(similarity(pose), -1), epsilon);
+      EXPECT_POSE_NEAR(similarity(pose_motion.pose(pose, +1)), similarity(pose_motion).pose(similarity(pose), +1), epsilon);
     }
 }
 

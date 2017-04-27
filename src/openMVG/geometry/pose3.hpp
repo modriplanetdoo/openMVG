@@ -225,6 +225,19 @@ public:
   Pose3 pose(const Pose3 &pose, double motion_factor) const {
     return Pose3(rotation(pose, motion_factor), center(pose, motion_factor));
   }
+
+  PoseMotion inverse() const {
+    return PoseMotion(incremental_rotation_.inverse(), -incremental_translation_);
+  }
+
+  const AngleAxis &getIncrementalRotation() const {
+      return incremental_rotation_;
+  }
+
+  const Vec3 &getIncrementalTranslation() const {
+      return incremental_translation_;
+  }
+
 };
 
 } // namespace geometry

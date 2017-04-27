@@ -69,6 +69,16 @@ struct Similarity3
   }
 
   /**
+  * @brief Apply transformation to a pose motion
+  * @param pose_motion Input pose motion
+  * @return Transformed pose motion
+  */
+  PoseMotion operator () ( const PoseMotion & pose_motion ) const
+  {
+    return PoseMotion(AngleAxis(pose_.rotation() * pose_motion.getIncrementalRotation().toRotationMatrix() * pose_.rotation().transpose()), scale_ * pose_.rotation() * pose_motion.getIncrementalTranslation() );
+  }
+
+  /**
   * @brief Get inverse of the similarity
   * @return Inverse of the similarity
   */
