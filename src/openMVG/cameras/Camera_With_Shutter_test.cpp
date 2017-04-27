@@ -131,7 +131,7 @@ TEST(Shutter_Camera, RollingShutter_Projection) {
   double shutter_read_time = 33.0 / 1000.0;                         // 33 ms
   AngleAxis R_motion(D2R(-5.0) * shutter_read_time, Vec3::UnitX()); // -5 °/s around X axis
   Vec3 C_motion = Vec3(0, 10, 0) * shutter_read_time;               // 10 m/s towards North
-  geometry::PoseMotion pose_motion(R_motion, (C_motion).eval());
+  geometry::PoseMotion pose_motion(R_motion, C_motion);
 
   std::shared_ptr<cameras::AbstractShutterModel> shutter_model = std::make_shared<cameras::RollingShutter>(im_w, im_h);
   const ShutterCamera<cameras::Pinhole_Intrinsic_Radial_K3> cam(shutter_model, pose_motion, im_w, im_h, im_f, im_w / 2.0, im_h / 2.0, 0.01, 0.03, 0.3);

@@ -63,7 +63,7 @@ public:
     const Vec3 & pt3D,
     double motion_factor) const
   {
-      return Pinhole_Intrinsic::project(pose_motion_.pose(pose, motion_factor), pt3D);
+      return T::project(pose_motion_.pose(pose, motion_factor), pt3D);
   }
 
   virtual Vec2 project(
