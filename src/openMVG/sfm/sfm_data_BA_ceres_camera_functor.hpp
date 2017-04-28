@@ -19,6 +19,23 @@
 namespace openMVG {
 namespace sfm {
 
+template <typename T>
+void ApplyPose(
+  const T* const cam_extrinsics,
+  const T* const pos_3dpoint,
+  T* pos_proj)
+{
+    const T * cam_R = &cam_extrinsics[0];
+    const T * cam_C = &cam_extrinsics[3];
+
+    // Apply the camera center
+    pos_proj[0] = pos_3dpoint[0] - cam_C[0];
+    pos_proj[1] = pos_3dpoint[1] - cam_C[1];
+    pos_proj[2] = pos_3dpoint[2] - cam_C[2];
+
+    // Rotate the point according the camera rotation
+    ceres::AngleAxisRotatePoint(cam_R, pos_proj, pos_proj);
+}
 
 /// Decorator used to Weight a given cost camera functor
 /// i.e useful to weight GCP (Ground Control Points)
@@ -66,8 +83,8 @@ struct WeightedCostFunction
  *  Data parameter blocks are the following <2,3,6,3>
  *  - 2 => dimension of the residuals,
  *  - 3 => the intrinsic data block [focal, principal point x, principal point y],
- *  - 6 => the camera extrinsic data block (camera orientation and position) [R;t],
- *         - rotation(angle axis), and translation [rX,rY,rZ,tx,ty,tz].
+ *  - 6 => the camera extrinsic data block (camera orientation and position) [R;C],
+ *         - rotation(angle axis), and center [rX,rY,rZ,cx,cy,cz].
  *  - 3 => a 3D point data block.
  *
  */
@@ -87,8 +104,8 @@ struct ResidualErrorFunctor_Pinhole_Intrinsic
 
   /**
    * @param[in] cam_intrinsics: Camera intrinsics( focal, principal point [x,y] )
-   * @param[in] cam_extrinsics: Camera parameterized using one block of 6 parameters [R;t]:
-   *   - 3 for rotation(angle axis), 3 for translation
+   * @param[in] cam_extrinsics: Camera parameterized using one block of 6 parameters [R;C]:
+   *   - 3 for rotation(angle axis), 3 for center
    * @param[in] pos_3dpoint
    * @param[out] out_residuals
    */
@@ -103,17 +120,8 @@ struct ResidualErrorFunctor_Pinhole_Intrinsic
     // Apply external parameters (Pose)
     //--
 
-    const T * cam_R = cam_extrinsics;
-    const T * cam_t = &cam_extrinsics[3];
-
     T pos_proj[3];
-    // Rotate the point according the camera rotation
-    ceres::AngleAxisRotatePoint(cam_R, pos_3dpoint, pos_proj);
-
-    // Apply the camera translation
-    pos_proj[0] += cam_t[0];
-    pos_proj[1] += cam_t[1];
-    pos_proj[2] += cam_t[2];
+    ApplyPose(cam_extrinsics, pos_3dpoint, pos_proj);
 
     // Transform the point from homogeneous to euclidean (undistorted point)
     const T x_u = pos_proj[0] / pos_proj[2];
@@ -175,8 +183,8 @@ struct ResidualErrorFunctor_Pinhole_Intrinsic
  *  Data parameter blocks are the following <2,4,6,3>
  *  - 2 => dimension of the residuals,
  *  - 4 => the intrinsic data block [focal, principal point x, principal point y, K1],
- *  - 6 => the camera extrinsic data block (camera orientation and position) [R;t],
- *         - rotation(angle axis), and translation [rX,rY,rZ,tx,ty,tz].
+ *  - 6 => the camera extrinsic data block (camera orientation and position) [R;C],
+ *         - rotation(angle axis), and center [rX,rY,rZ,cx,cy,cz].
  *  - 3 => a 3D point data block.
  *
  */
@@ -197,8 +205,8 @@ struct ResidualErrorFunctor_Pinhole_Intrinsic_Radial_K1
 
   /**
    * @param[in] cam_intrinsics: Camera intrinsics( focal, principal point [x,y], K1 )
-   * @param[in] cam_extrinsics: Camera parameterized using one block of 6 parameters [R;t]:
-   *   - 3 for rotation(angle axis), 3 for translation
+   * @param[in] cam_extrinsics: Camera parameterized using one block of 6 parameters [R;C]:
+   *   - 3 for rotation(angle axis), 3 for center
    * @param[in] pos_3dpoint
    * @param[out] out_residuals
    */
@@ -213,17 +221,8 @@ struct ResidualErrorFunctor_Pinhole_Intrinsic_Radial_K1
     // Apply external parameters (Pose)
     //--
 
-    const T * cam_R = cam_extrinsics;
-    const T * cam_t = &cam_extrinsics[3];
-
     T pos_proj[3];
-    // Rotate the point according the camera rotation
-    ceres::AngleAxisRotatePoint(cam_R, pos_3dpoint, pos_proj);
-
-    // Apply the camera translation
-    pos_proj[0] += cam_t[0];
-    pos_proj[1] += cam_t[1];
-    pos_proj[2] += cam_t[2];
+    ApplyPose(cam_extrinsics, pos_3dpoint, pos_proj);
 
     // Transform the point from homogeneous to euclidean (undistorted point)
     const T x_u = pos_proj[0] / pos_proj[2];
@@ -292,8 +291,8 @@ struct ResidualErrorFunctor_Pinhole_Intrinsic_Radial_K1
  *  Data parameter blocks are the following <2,6,6,3>
  *  - 2 => dimension of the residuals,
  *  - 6 => the intrinsic data block [focal, principal point x, principal point y, K1, K2, K3],
- *  - 6 => the camera extrinsic data block (camera orientation and position) [R;t],
- *         - rotation(angle axis), and translation [rX,rY,rZ,tx,ty,tz].
+ *  - 6 => the camera extrinsic data block (camera orientation and position) [R;C],
+ *         - rotation(angle axis), and center [rX,rY,rZ,cx,cy,cz].
  *  - 3 => a 3D point data block.
  *
  */
@@ -316,8 +315,8 @@ struct ResidualErrorFunctor_Pinhole_Intrinsic_Radial_K3
 
   /**
    * @param[in] cam_intrinsics: Camera intrinsics( focal, principal point [x,y], k1, k2, k3 )
-   * @param[in] cam_extrinsics: Camera parameterized using one block of 6 parameters [R;t]:
-   *   - 3 for rotation(angle axis), 3 for translation
+   * @param[in] cam_extrinsics: Camera parameterized using one block of 6 parameters [R;C]:
+   *   - 3 for rotation(angle axis), 3 for center
    * @param[in] pos_3dpoint
    * @param[out] out_residuals
    */
@@ -332,17 +331,8 @@ struct ResidualErrorFunctor_Pinhole_Intrinsic_Radial_K3
     // Apply external parameters (Pose)
     //--
 
-    const T * cam_R = cam_extrinsics;
-    const T * cam_t = &cam_extrinsics[3];
-
     T pos_proj[3];
-    // Rotate the point according the camera rotation
-    ceres::AngleAxisRotatePoint(cam_R, pos_3dpoint, pos_proj);
-
-    // Apply the camera translation
-    pos_proj[0] += cam_t[0];
-    pos_proj[1] += cam_t[1];
-    pos_proj[2] += cam_t[2];
+    ApplyPose(cam_extrinsics, pos_3dpoint, pos_proj);
 
     // Transform the point from homogeneous to euclidean (undistorted point)
     const T x_u = pos_proj[0] / pos_proj[2];
@@ -415,8 +405,8 @@ struct ResidualErrorFunctor_Pinhole_Intrinsic_Radial_K3
  *  Data parameter blocks are the following <2,8,6,3>
  *  - 2 => dimension of the residuals,
  *  - 8 => the intrinsic data block [focal, principal point x, principal point y, K1, K2, K3, T1, T2],
- *  - 6 => the camera extrinsic data block (camera orientation and position) [R;t],
- *         - rotation(angle axis), and translation [rX,rY,rZ,tx,ty,tz].
+ *  - 6 => the camera extrinsic data block (camera orientation and position) [R;C],
+ *         - rotation(angle axis), and center [rX,rY,rZ,cx,cy,cz].
  *  - 3 => a 3D point data block.
  *
  */
@@ -441,8 +431,8 @@ struct ResidualErrorFunctor_Pinhole_Intrinsic_Brown_T2
 
   /**
    * @param[in] cam_intrinsics: Camera intrinsics( focal, principal point [x,y], k1, k2, k3, t1, t2 )
-   * @param[in] cam_extrinsics: Camera parameterized using one block of 6 parameters [R;t]:
-   *   - 3 for rotation(angle axis), 3 for translation
+   * @param[in] cam_extrinsics: Camera parameterized using one block of 6 parameters [R;C]:
+   *   - 3 for rotation(angle axis), 3 for center
    * @param[in] pos_3dpoint
    * @param[out] out_residuals
    */
@@ -457,17 +447,8 @@ struct ResidualErrorFunctor_Pinhole_Intrinsic_Brown_T2
     // Apply external parameters (Pose)
     //--
 
-    const T * cam_R = cam_extrinsics;
-    const T * cam_t = &cam_extrinsics[3];
-
     T pos_proj[3];
-    // Rotate the point according the camera rotation
-    ceres::AngleAxisRotatePoint(cam_R, pos_3dpoint, pos_proj);
-
-    // Apply the camera translation
-    pos_proj[0] += cam_t[0];
-    pos_proj[1] += cam_t[1];
-    pos_proj[2] += cam_t[2];
+    ApplyPose(cam_extrinsics, pos_3dpoint, pos_proj);
 
     // Transform the point from homogeneous to euclidean (undistorted point)
     const T x_u = pos_proj[0] / pos_proj[2];
@@ -545,8 +526,8 @@ struct ResidualErrorFunctor_Pinhole_Intrinsic_Brown_T2
  *  Data parameter blocks are the following <2,8,6,3>
  *  - 2 => dimension of the residuals,
  *  - 7 => the intrinsic data block [focal, principal point x, principal point y, K1, K2, K3, K4],
- *  - 6 => the camera extrinsic data block (camera orientation and position) [R;t],
- *         - rotation(angle axis), and translation [rX,rY,rZ,tx,ty,tz].
+ *  - 6 => the camera extrinsic data block (camera orientation and position) [R;C],
+ *         - rotation(angle axis), and center [rX,rY,rZ,cx,cy,cz].
  *  - 3 => a 3D point data block.
  *
  */
@@ -571,8 +552,8 @@ struct ResidualErrorFunctor_Pinhole_Intrinsic_Fisheye
 
   /**
    * @param[in] cam_intrinsics: Camera intrinsics( focal, principal point [x,y], k1, k2, k3, k4 )
-   * @param[in] cam_extrinsics: Camera parameterized using one block of 6 parameters [R;t]:
-   *   - 3 for rotation(angle axis), 3 for translation
+   * @param[in] cam_extrinsics: Camera parameterized using one block of 6 parameters [R;C]:
+   *   - 3 for rotation(angle axis), 3 for center
    * @param[in] pos_3dpoint
    * @param[out] out_residuals
    */
@@ -587,17 +568,8 @@ struct ResidualErrorFunctor_Pinhole_Intrinsic_Fisheye
     // Apply external parameters (Pose)
     //--
 
-    const T * cam_R = cam_extrinsics;
-    const T * cam_t = &cam_extrinsics[3];
-
     T pos_proj[3];
-    // Rotate the point according the camera rotation
-    ceres::AngleAxisRotatePoint(cam_R, pos_3dpoint, pos_proj);
-
-    // Apply the camera translation
-    pos_proj[0] += cam_t[0];
-    pos_proj[1] += cam_t[1];
-    pos_proj[2] += cam_t[2];
+    ApplyPose(cam_extrinsics, pos_3dpoint, pos_proj);
 
     // Transform the point from homogeneous to euclidean (undistorted point)
     const T x_u = pos_proj[0] / pos_proj[2];

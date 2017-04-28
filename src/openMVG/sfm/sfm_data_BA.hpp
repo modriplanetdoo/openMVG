@@ -23,6 +23,13 @@ enum class Extrinsic_Parameter_Type : int
   ADJUST_ALL = ADJUST_ROTATION | ADJUST_TRANSLATION
 };
 
+inline /*constexpr*/ Extrinsic_Parameter_Type
+operator&(Extrinsic_Parameter_Type lhs, Extrinsic_Parameter_Type rhs)
+{
+  return static_cast<Extrinsic_Parameter_Type>
+      (static_cast<int>(lhs) & static_cast<int>(rhs));
+}
+
 /// Enum to control if the Structure must be refined or not
 enum class Structure_Parameter_Type : bool
 {

@@ -53,13 +53,18 @@ struct PoseCenterConstraintCostFunction
   const
   {
     const T * cam_R = &cam_extrinsics[0];
-    const T * cam_t = &cam_extrinsics[3];
+    const T * cam_C = &cam_extrinsics[3];
     const T cam_R_transpose[3] = {-cam_R[0], -cam_R[1], -cam_R[2]};
 
     const T sensor_R[3] = { T(pose_sensor_rotation_(0)), T(pose_sensor_rotation_(1)), T(pose_sensor_rotation_(2)) };
     const T sensor_t[3] = { T(pose_sensor_translation_(0)), T(pose_sensor_translation_(1)), T(pose_sensor_translation_(2)) };
     const T sensor_R_transpose[3] = {-sensor_R[0], -sensor_R[1], -sensor_R[2]};
 
+    T cam_t[3];
+    ceres::AngleAxisRotatePoint(cam_R, cam_C, cam_t);
+    cam_t[0] = - cam_t[0];
+    cam_t[1] = - cam_t[1];
+    cam_t[2] = - cam_t[2];
 
     // Here is a brief summary of what should happen below:
     // Calculate sensor's position in world coordinate using camera extrinsics and use that value for residual
@@ -284,12 +289,12 @@ bool Bundle_Adjustment_Ceres::Adjust
 
     const Pose3 & pose = pose_it.second;
     const Mat3 R = pose.rotation();
-    const Vec3 t = pose.translation();
+    const Vec3 C = pose.center();
 
     double angleAxis[3];
     ceres::RotationMatrixToAngleAxis((const double*)R.data(), angleAxis);
-    // angleAxis + translation
-    map_poses[indexPose] = {angleAxis[0], angleAxis[1], angleAxis[2], t(0), t(1), t(2)};
+    // angleAxis + center
+    map_poses[indexPose] = {angleAxis[0], angleAxis[1], angleAxis[2], C(0), C(1), C(2)};
 
     double * parameter_block = &map_poses[indexPose][0];
     problem.AddParameterBlock(parameter_block, 6);
@@ -301,16 +306,16 @@ bool Bundle_Adjustment_Ceres::Adjust
     else  // Subset parametrization
     {
       std::vector<int> vec_constant_extrinsic;
-      // If we adjust only the translation, we must set ROTATION as constant
-      if (options.extrinsics_opt == Extrinsic_Parameter_Type::ADJUST_TRANSLATION)
+      // If we don't adjust ROTATION, we must set ROTATION as constant
+      if ((options.extrinsics_opt & Extrinsic_Parameter_Type::ADJUST_ROTATION) == Extrinsic_Parameter_Type::NONE)
       {
         // Subset rotation parametrization
         vec_constant_extrinsic.push_back(0);
         vec_constant_extrinsic.push_back(1);
         vec_constant_extrinsic.push_back(2);
       }
-      // If we adjust only the rotation, we must set TRANSLATION as constant
-      if (options.extrinsics_opt == Extrinsic_Parameter_Type::ADJUST_ROTATION)
+      // If we don't adjust TRANSLATION, we must set TRANSLATION as constant
+      if ((options.extrinsics_opt & Extrinsic_Parameter_Type::ADJUST_TRANSLATION) == Extrinsic_Parameter_Type::NONE)
       {
         // Subset translation parametrization
         vec_constant_extrinsic.push_back(3);
@@ -511,10 +516,10 @@ bool Bundle_Adjustment_Ceres::Adjust
 
         Mat3 R_refined;
         ceres::AngleAxisToRotationMatrix(&map_poses[indexPose][0], R_refined.data());
-        Vec3 t_refined(map_poses[indexPose][3], map_poses[indexPose][4], map_poses[indexPose][5]);
+        Vec3 C_refined(map_poses[indexPose][3], map_poses[indexPose][4], map_poses[indexPose][5]);
         // Update the pose
         Pose3 & pose = pose_it.second;
-        pose = Pose3(R_refined, -R_refined.transpose() * t_refined);
+        pose = Pose3(R_refined, C_refined);
       }
     }
 
