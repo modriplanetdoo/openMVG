@@ -27,9 +27,6 @@ class ShutterCamera : public T
 private:
   ShutterModel shutter_model_;
 
-  // TODO: should not be member
-  geometry::PoseMotion pose_motion_;
-
 public:
 
   /**
@@ -42,9 +39,9 @@ public:
   * > ShutterCamera<cameras::Pinhole_Intrinsic>(shutter_model, pose_motion, w, h, focal_length_pix, ppx, ppy)
   */
   template <class... Args>
-  ShutterCamera(const ShutterModel &shutter_model, const geometry::PoseMotion &pose_motion, Args&&... args)
+  ShutterCamera(const ShutterModel &shutter_model, Args&&... args)
   : T(std::forward<Args>(args)...)
-  , shutter_model_(shutter_model), pose_motion_(pose_motion)
+  , shutter_model_(shutter_model)
   {
     // nothing to do
   }
@@ -63,7 +60,7 @@ public:
     const Vec3 & pt3D,
     double motion_factor) const
   {
-      return T::project(pose_motion_.pose(pose, motion_factor), pt3D);
+      return T::project(pose.pose(motion_factor), pt3D);
   }
 
   virtual Vec2 project(

@@ -65,18 +65,26 @@ struct Similarity3
   */
   Pose3 operator () ( const Pose3 & pose ) const
   {
-    return Pose3( pose.rotation() * pose_.rotation().transpose(), this->operator()( pose.center() ) );
+    if (pose.hasMotion())
+    {
+        return Pose3( pose.rotation() * pose_.rotation().transpose(), this->operator()( pose.center() ),
+                      AngleAxis(pose_.rotation() * pose.getIncrementalRotation().toRotationMatrix() * pose_.rotation().transpose()), scale_ * pose_.rotation() * pose.getIncrementalTranslation() );
+    }
+    else
+    {
+        return Pose3( pose.rotation() * pose_.rotation().transpose(), this->operator()( pose.center() ) );
+    }
   }
 
-  /**
-  * @brief Apply transformation to a pose motion
-  * @param pose_motion Input pose motion
-  * @return Transformed pose motion
-  */
-  PoseMotion operator () ( const PoseMotion & pose_motion ) const
-  {
-    return PoseMotion(AngleAxis(pose_.rotation() * pose_motion.getIncrementalRotation().toRotationMatrix() * pose_.rotation().transpose()), scale_ * pose_.rotation() * pose_motion.getIncrementalTranslation() );
-  }
+//  /**
+//  * @brief Apply transformation to a pose motion
+//  * @param pose_motion Input pose motion
+//  * @return Transformed pose motion
+//  */
+//  PoseMotion operator () ( const PoseMotion & pose_motion ) const
+//  {
+//    return PoseMotion(AngleAxis(pose_.rotation() * pose_motion.getIncrementalRotation().toRotationMatrix() * pose_.rotation().transpose()), scale_ * pose_.rotation() * pose_motion.getIncrementalTranslation() );
+//  }
 
   /**
   * @brief Get inverse of the similarity

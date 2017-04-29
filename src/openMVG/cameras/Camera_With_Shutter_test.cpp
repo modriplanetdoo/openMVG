@@ -40,13 +40,13 @@ TEST(GlobalShutter, getMotionFactor) {
 TEST(PoseMotion, center) {
     const double epsilon = 1e-5;
 
-    geometry::Pose3 pose;
-    geometry::PoseMotion pose_motion(AngleAxis(), (Vec3(0, 0, 1)).eval());
+    geometry::Pose3 pose(Mat3::Identity(), Vec3::Zero(),
+                         AngleAxis(), (Vec3(0, 0, 1)).eval());
 
-    EXPECT_MATRIX_NEAR(pose_motion.center(pose, 0), pose.center(), epsilon);
+    EXPECT_MATRIX_NEAR(pose.center(0), pose.center(), epsilon);
 
-    EXPECT_MATRIX_NEAR(pose_motion.center(pose, -1), (pose.center() - Vec3(0, 0, 1)), epsilon);
-    EXPECT_MATRIX_NEAR(pose_motion.center(pose, +1), (pose.center() + Vec3(0, 0, 1)), epsilon);
+    EXPECT_MATRIX_NEAR(pose.center(-1), (pose.center() - Vec3(0, 0, 1)), epsilon);
+    EXPECT_MATRIX_NEAR(pose.center(+1), (pose.center() + Vec3(0, 0, 1)), epsilon);
 }
 
 TEST(PoseMotion, rotation) {
@@ -57,13 +57,13 @@ TEST(PoseMotion, rotation) {
       // generate pose with random rotation
       Vec4 random = Vec4::Random();
 
-      geometry::Pose3 pose(AngleAxis(random(0), random.tail<3>().normalized()).toRotationMatrix(), Vec3()); // with random rotation
-      geometry::PoseMotion pose_motion(AngleAxis(D2R(90), Vec3::UnitZ()), (Vec3(0, 0, 0)).eval()); // rotate 90°
+      geometry::Pose3 pose(AngleAxis(random(0), random.tail<3>().normalized()).toRotationMatrix(), Vec3(), // with random rotation
+                           AngleAxis(D2R(90), Vec3::UnitZ()), (Vec3(0, 0, 0)).eval()); // rotate 90°
 
-      EXPECT_MATRIX_NEAR(pose_motion.rotation(pose, 0), (pose.rotation() * Mat3::Identity()).eval(), epsilon);
+      EXPECT_MATRIX_NEAR(pose.rotation(0), (pose.rotation() * Mat3::Identity()).eval(), epsilon);
 
-      EXPECT_MATRIX_NEAR(pose_motion.rotation(pose, -1), (pose.rotation() * (Mat3() << -Vec3::UnitY(),  Vec3::UnitX(), Vec3::UnitZ()).finished()), epsilon);
-      EXPECT_MATRIX_NEAR(pose_motion.rotation(pose, +1), (pose.rotation() * (Mat3() <<  Vec3::UnitY(), -Vec3::UnitX(), Vec3::UnitZ()).finished()), epsilon);
+      EXPECT_MATRIX_NEAR(pose.rotation(-1), (pose.rotation() * (Mat3() << -Vec3::UnitY(),  Vec3::UnitX(), Vec3::UnitZ()).finished()), epsilon);
+      EXPECT_MATRIX_NEAR(pose.rotation(+1), (pose.rotation() * (Mat3() <<  Vec3::UnitY(), -Vec3::UnitX(), Vec3::UnitZ()).finished()), epsilon);
     }
 }
 
@@ -77,18 +77,18 @@ TEST(PoseMotion, pose) {
       Vec4 random_1 = Vec4::Random();
       Vec4 random_2 = Vec4::Random();
 
-      geometry::Pose3 pose(AngleAxis(random_1(0), random_1.tail<3>().normalized()).toRotationMatrix(), Vec3()); // with random rotation
-      geometry::PoseMotion pose_motion(AngleAxis(D2R(random_2(0) * 180), random_2.tail<3>().normalized()), (Vec3::Random() * 10).eval()); // random pose motion
+      geometry::Pose3 pose(AngleAxis(random_1(0), random_1.tail<3>().normalized()).toRotationMatrix(), Vec3(), // with random rotation
+                           AngleAxis(D2R(random_2(0) * 180), random_2.tail<3>().normalized()), (Vec3::Random() * 10).eval()); // random pose motion
 
       // test rotation
-      EXPECT_MATRIX_NEAR(pose_motion.pose(pose,  0).rotation(), pose_motion.rotation(pose,  0), epsilon);
-      EXPECT_MATRIX_NEAR(pose_motion.pose(pose, -1).rotation(), pose_motion.rotation(pose, -1), epsilon);
-      EXPECT_MATRIX_NEAR(pose_motion.pose(pose, +1).rotation(), pose_motion.rotation(pose, +1), epsilon);
+      EXPECT_MATRIX_NEAR(pose.pose( 0).rotation(), pose.rotation( 0), epsilon);
+      EXPECT_MATRIX_NEAR(pose.pose(-1).rotation(), pose.rotation(-1), epsilon);
+      EXPECT_MATRIX_NEAR(pose.pose(+1).rotation(), pose.rotation(+1), epsilon);
 
       // test center
-      EXPECT_MATRIX_NEAR(pose_motion.pose(pose,  0).center(), pose_motion.center(pose,  0), epsilon);
-      EXPECT_MATRIX_NEAR(pose_motion.pose(pose, -1).center(), pose_motion.center(pose, -1), epsilon);
-      EXPECT_MATRIX_NEAR(pose_motion.pose(pose, +1).center(), pose_motion.center(pose, +1), epsilon);
+      EXPECT_MATRIX_NEAR(pose.pose( 0).center(), pose.center( 0), epsilon);
+      EXPECT_MATRIX_NEAR(pose.pose(-1).center(), pose.center(-1), epsilon);
+      EXPECT_MATRIX_NEAR(pose.pose(+1).center(), pose.center(+1), epsilon);
     }
 }
 
@@ -105,17 +105,16 @@ TEST(PoseMotion, transform) {
 
       geometry::Similarity3 similarity(geometry::Pose3(AngleAxis(D2R(random_3(0) * 180), random_3.segment<3>(1).normalized()).toRotationMatrix(), (Vec3::Random() * 100).eval()), random_3(4) + 1.01);
 
-      geometry::Pose3 pose(AngleAxis(D2R(random_1(0) * 180), random_1.tail<3>().normalized()).toRotationMatrix(), Vec3::Random() * 300); // with random rotation
-      geometry::PoseMotion pose_motion(AngleAxis(D2R(random_2(0) * 180), random_2.tail<3>().normalized()), (Vec3::Random() * 10).eval()); // random pose motion
+      geometry::Pose3 pose(AngleAxis(D2R(random_1(0) * 180), random_1.tail<3>().normalized()).toRotationMatrix(), Vec3::Random() * 300, // with random rotation
+                           AngleAxis(D2R(random_2(0) * 180), random_2.tail<3>().normalized()), (Vec3::Random() * 10).eval()); // random pose motion
 
       // applying pose_motion to a pose first and then transfroming should yield same results as
       // transforming both pose_motion and pose and then applying transformed_pose_motion to transfromed_pose
-      EXPECT_POSE_NEAR(similarity(pose_motion.pose(pose,  0)), similarity(pose_motion).pose(similarity(pose), 0), epsilon);
-      EXPECT_POSE_NEAR(similarity(pose_motion.pose(pose, -1)), similarity(pose_motion).pose(similarity(pose), -1), epsilon);
-      EXPECT_POSE_NEAR(similarity(pose_motion.pose(pose, +1)), similarity(pose_motion).pose(similarity(pose), +1), epsilon);
+      EXPECT_POSE_NEAR(similarity(pose.pose( 0)), similarity(pose).pose( 0), epsilon);
+      EXPECT_POSE_NEAR(similarity(pose.pose(-1)), similarity(pose).pose(-1), epsilon);
+      EXPECT_POSE_NEAR(similarity(pose.pose(+1)), similarity(pose).pose(+1), epsilon);
     }
 }
-
 
 TEST(Shutter_Camera, RollingShutter_Projection) {
   const double epsilon = 1e-4;
@@ -126,15 +125,15 @@ TEST(Shutter_Camera, RollingShutter_Projection) {
 
   Mat3 R; R << 1, 0, 0, 0, -1, 0, 0, 0, -1; // nadir
   Vec3 C; C << 0,0, 100;                    // 100m above ground
-  geometry::Pose3 pose(R, C);
 
   double shutter_read_time = 33.0 / 1000.0;                         // 33 ms
   AngleAxis R_motion(D2R(-5.0) * shutter_read_time, Vec3::UnitX()); // -5 °/s around X axis
   Vec3 C_motion = Vec3(0, 10, 0) * shutter_read_time;               // 10 m/s towards North
-  geometry::PoseMotion pose_motion(R_motion, C_motion);
+
+  geometry::Pose3 pose(R, C, R_motion, C_motion);
 
   std::shared_ptr<cameras::AbstractShutterModel> shutter_model = std::make_shared<cameras::RollingShutter>(im_w, im_h);
-  const ShutterCamera<cameras::Pinhole_Intrinsic_Radial_K3> cam(shutter_model, pose_motion, im_w, im_h, im_f, im_w / 2.0, im_h / 2.0, 0.01, 0.03, 0.3);
+  const ShutterCamera<cameras::Pinhole_Intrinsic_Radial_K3> cam(shutter_model, im_w, im_h, im_f, im_w / 2.0, im_h / 2.0, 0.01, 0.03, 0.3);
 
 
   for (int i = 0; i < 10; ++i)

@@ -30,6 +30,11 @@ class Pose3
     /// Center of rotation
     Vec3 center_;
 
+    /// Motion rotation
+    AngleAxis incremental_rotation_;
+    /// Motion translation
+    Vec3 incremental_translation_;
+
   public:
 
     /**
@@ -38,16 +43,35 @@ class Pose3
     */
     Pose3()
       : rotation_( Mat3::Identity() ),
-        center_( Vec3::Zero() )
+        center_( Vec3::Zero() ),
+        incremental_rotation_(0, Vec3::UnitX()),
+        incremental_translation_(Vec3::Zero())
     {
 
     }
+
     /**
     * @brief Constructor
     * @param r Rotation
     * @param c Center
     */
-    Pose3( const Mat3& r, const Vec3& c ) : rotation_( r ), center_( c ) {}
+    Pose3( const Mat3& r, const Vec3& c )
+        : rotation_( r )
+        , center_( c )
+        , incremental_rotation_(0, Vec3::UnitX())
+        , incremental_translation_(Vec3::Zero())
+    {
+
+    }
+
+    /**
+    * @brief Constructor
+    * @param r Rotation
+    * @param c Center
+    * @param m_r Motion rotation
+    * @param m_t Motion translation
+    */
+    Pose3( const Mat3& r, const Vec3& c, const AngleAxis& m_r, const Vec3& m_t ) : rotation_( r ), center_( c ), incremental_rotation_( m_r ), incremental_translation_( m_t ) {}
 
     /**
     * @brief Get Rotation matrix
@@ -95,6 +119,34 @@ class Pose3
       return -( rotation_ * center_ );
     }
 
+    Mat3 rotation(double motion_factor) const {
+      return rotation() * AngleAxis(motion_factor * incremental_rotation_.angle(), incremental_rotation_.axis()).toRotationMatrix();
+    }
+
+    Vec3 center(double motion_factor) const {
+      return center() + (incremental_translation_ * motion_factor);
+    }
+
+    Vec3 translation(double motion_factor) const {
+      return -( rotation(motion_factor) * center(motion_factor) );
+    }
+
+    Pose3 pose(double motion_factor) const {
+      return Pose3(rotation(motion_factor), center(motion_factor));
+    }
+
+    const AngleAxis &getIncrementalRotation() const {
+      return incremental_rotation_;
+    }
+
+    const Vec3 &getIncrementalTranslation() const {
+      return incremental_translation_;
+    }
+
+    bool hasMotion() const {
+        return !incremental_rotation_.isApprox(AngleAxis()) || !incremental_translation_.isApprox(Vec3::Zero());
+    }
+
 
     /**
     * @brief Apply pose
@@ -106,24 +158,28 @@ class Pose3
       return rotation_ * ( p.colwise() - center_ );
     }
 
-
-    /**
-    * @brief Composition of poses
-    * @param P a Pose
-    * @return Composition of current pose and parameter pose
-    */
-    Pose3 operator * ( const Pose3& P ) const
-    {
-      return Pose3( rotation_ * P.rotation_, P.center_ + P.rotation_.transpose() * center_ );
-    }
+//    // NOT USED ANYWHERE
+//    /**
+//    * @brief Composition of poses
+//    * @param P a Pose
+//    * @return Composition of current pose and parameter pose
+//    */
+//    Pose3 operator * ( const Pose3& P ) const
+//    {
+//      return Pose3( rotation_ * P.rotation_, P.center_ + P.rotation_.transpose() * center_ );
+//    }
 
 
     /**
     * @brief Get inverse of the pose
     * @return Inverse of the pose
+    *
+    * @note inverted pose has no motion
     */
     Pose3 inverse() const
     {
+      // inverse for pose motion does not exist so we return plain pose
+
       return Pose3( rotation_.transpose(),  -( rotation_ * center_ ) );
     }
 
@@ -180,65 +236,65 @@ class Pose3
 
 
 
-//------------------
-//-- Bibliography --
-//------------------
-//- [1] "Photogrammetric Accuracy and Modeling of Rolling Shutter Cameras."
-//- Authors: Jonas Vautherin, Simon Rutishauser, Klaus Schneider-Zapp, Hon Fai Choi Venera Chovancova, Alexis Glass, Christoph Strecha.
-//- Date: June 2016.
-//- Publication : ISPRS Annals of Photogrammetry, Remote Sensing and Spatial Information Sciences, Volume III-3, 2016, pp.139-146.
-//------
+////------------------
+////-- Bibliography --
+////------------------
+////- [1] "Photogrammetric Accuracy and Modeling of Rolling Shutter Cameras."
+////- Authors: Jonas Vautherin, Simon Rutishauser, Klaus Schneider-Zapp, Hon Fai Choi Venera Chovancova, Alexis Glass, Christoph Strecha.
+////- Date: June 2016.
+////- Publication : ISPRS Annals of Photogrammetry, Remote Sensing and Spatial Information Sciences, Volume III-3, 2016, pp.139-146.
+////------
 
-/**
-* @brief Defines a pose motion in 3D space. The amount of motion applied depends on `motion_factor`.
-* `motion_factor` of `0` means that there is no motion to be applied.
-*
-* Well known pinhole camera matrix `[R|C]` is here considere to be more like `[R(t)|C(t)]`.
-* where:
-* > R(t) = R0 · λ ∆R
-* > c(t) = c0 + λ ∆c
-* > λ ∈ [−1, +1]
-*
-* Note:
-* - All rotations and translations are in world frame
-*/
-class PoseMotion {
-private:
-  AngleAxis incremental_rotation_;
-  Vec3 incremental_translation_;
+///**
+//* @brief Defines a pose motion in 3D space. The amount of motion applied depends on `motion_factor`.
+//* `motion_factor` of `0` means that there is no motion to be applied.
+//*
+//* Well known pinhole camera matrix `[R|C]` is here considere to be more like `[R(t)|C(t)]`.
+//* where:
+//* > R(t) = R0 · λ ∆R
+//* > c(t) = c0 + λ ∆c
+//* > λ ∈ [−1, +1]
+//*
+//* Note:
+//* - All rotations and translations are in world frame
+//*/
+//class PoseMotion {
+//private:
+//  AngleAxis incremental_rotation_;
+//  Vec3 incremental_translation_;
 
-public:
-  PoseMotion(const AngleAxis &incremental_rotation, const Vec3 &incremental_translation)
-    : incremental_rotation_(incremental_rotation), incremental_translation_(incremental_translation)
-  {
-    // nothing to do
-  }
+//public:
+//  PoseMotion(const AngleAxis &incremental_rotation, const Vec3 &incremental_translation)
+//    : incremental_rotation_(incremental_rotation), incremental_translation_(incremental_translation)
+//  {
+//    // nothing to do
+//  }
 
-  Mat3 rotation(const Pose3 &pose, double motion_factor) const {
-    return pose.rotation() * AngleAxis(motion_factor * incremental_rotation_.angle(), incremental_rotation_.axis()).toRotationMatrix();
-  }
+//  Mat3 rotation(const Pose3 &pose, double motion_factor) const {
+//    return pose.rotation() * AngleAxis(motion_factor * incremental_rotation_.angle(), incremental_rotation_.axis()).toRotationMatrix();
+//  }
 
-  Vec3 center(const Pose3 &pose, double motion_factor) const {
-    return pose.center() + (incremental_translation_ * motion_factor);
-  }
+//  Vec3 center(const Pose3 &pose, double motion_factor) const {
+//    return pose.center() + (incremental_translation_ * motion_factor);
+//  }
 
-  Pose3 pose(const Pose3 &pose, double motion_factor) const {
-    return Pose3(rotation(pose, motion_factor), center(pose, motion_factor));
-  }
+//  Pose3 pose(const Pose3 &pose, double motion_factor) const {
+//    return Pose3(rotation(pose, motion_factor), center(pose, motion_factor));
+//  }
 
-  PoseMotion inverse() const {
-    return PoseMotion(incremental_rotation_.inverse(), -incremental_translation_);
-  }
+////  PoseMotion inverse() const {
+////    return PoseMotion(incremental_rotation_.inverse(), -incremental_translation_);
+////  }
 
-  const AngleAxis &getIncrementalRotation() const {
-      return incremental_rotation_;
-  }
+//  const AngleAxis &getIncrementalRotation() const {
+//      return incremental_rotation_;
+//  }
 
-  const Vec3 &getIncrementalTranslation() const {
-      return incremental_translation_;
-  }
+//  const Vec3 &getIncrementalTranslation() const {
+//      return incremental_translation_;
+//  }
 
-};
+//};
 
 } // namespace geometry
 } // namespace openMVG
