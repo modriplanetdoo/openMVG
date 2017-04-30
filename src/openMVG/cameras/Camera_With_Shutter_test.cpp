@@ -5,7 +5,6 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include "openMVG/cameras/Camera_Pinhole_Radial.hpp"
-#include "openMVG/cameras/Camera_With_Shutter.h"
 #include "openMVG/cameras/Shutter_Model.h"
 #include "openMVG/geometry/Similarity3.hpp"
 
@@ -132,8 +131,9 @@ TEST(Shutter_Camera, RollingShutter_Projection) {
 
   geometry::Pose3 pose(R, C, R_motion, C_motion);
 
-  std::shared_ptr<cameras::AbstractShutterModel> shutter_model = std::make_shared<cameras::RollingShutter>(im_w, im_h);
-  const ShutterCamera<cameras::Pinhole_Intrinsic_Radial_K3> cam(shutter_model, im_w, im_h, im_f, im_w / 2.0, im_h / 2.0, 0.01, 0.03, 0.3);
+  cameras::Pinhole_Intrinsic_Radial_K3 cam(im_w, im_h, im_f, im_w / 2.0, im_h / 2.0, 0.01, 0.03, 0.3);
+  cam.setShutterModel<cameras::RollingShutter>();
+  std::shared_ptr<const cameras::AbstractShutterModel> shutter_model = cam.getShutterModel();
 
 
   for (int i = 0; i < 10; ++i)
@@ -143,7 +143,7 @@ TEST(Shutter_Camera, RollingShutter_Projection) {
 
     Vec2 ptImage = cam.project(pose, pt3D);
     double motion_factor = shutter_model->getMotionFactor(ptImage);
-    Vec2 ptImage_ = cam.project(pose, pt3D, motion_factor);
+    Vec2 ptImage_ = cam.project(pose.pose(motion_factor), pt3D);
 
     EXPECT_MATRIX_NEAR(ptImage, ptImage_, epsilon);
   }

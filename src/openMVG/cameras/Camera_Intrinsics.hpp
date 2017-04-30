@@ -9,6 +9,7 @@
 #define OPENMVG_CAMERAS_CAMERA_INTRINSICS_HPP
 
 #include "openMVG/cameras/Camera_Common.hpp"
+#include "openMVG/cameras/Shutter_Model.h"
 #include "openMVG/geometry/pose3.hpp"
 #include "openMVG/numeric/numeric.h"
 #include "openMVG/stl/hash.hpp"
@@ -39,6 +40,8 @@ struct IntrinsicBase : public Clonable<IntrinsicBase>
   /// Height of image
   unsigned int h_;
 
+  std::shared_ptr<AbstractShutterModel> shutter_model_;
+
   /**
   * @brief Constructor
   * @param w Width of the image
@@ -46,7 +49,8 @@ struct IntrinsicBase : public Clonable<IntrinsicBase>
   */
   IntrinsicBase( unsigned int w = 0, unsigned int h = 0 )
     : w_( w ),
-      h_( h )
+      h_( h ),
+      shutter_model_( std::make_shared<GlobalShutter>(w, h) )
   {
 
   }
@@ -74,9 +78,23 @@ struct IntrinsicBase : public Clonable<IntrinsicBase>
     return h_;
   }
 
-  // --
-  // Virtual members
-  // --
+  /**
+   * @brief Get current shutter model
+   * @return instance of shutter model
+   */
+  std::shared_ptr<const AbstractShutterModel> getShutterModel() const
+  {
+      return std::const_pointer_cast<const AbstractShutterModel>(shutter_model_);
+  }
+
+  /**
+   * @brief Set shutter type to T
+   */
+  template<class T>
+  void setShutterModel()
+  {
+      shutter_model_ = std::make_shared<T>(w_, h_);
+  }
 
   /**
   * @brief Compute projection of a 3D point into the camera plane
@@ -84,8 +102,52 @@ struct IntrinsicBase : public Clonable<IntrinsicBase>
   * @param pose Pose used to compute projection
   * @param pt3D 3D-point to project on camera plane
   * @return Projected (2D) point on camera plane
+  *
+  * @note This function is aware of pose motion
   */
-  virtual Vec2 project(
+  Vec2 project(
+    const geometry::Pose3 & pose,
+    const Vec3 & pt3D) const
+  {
+    if (!pose.hasMotion())
+    {
+      return project_internal(pose, pt3D);
+    }
+
+    // find best motion factor such that motion factor from projected point is equal to "guessed" motion factor
+    const double epsilon = 1e-6; // criteria to stop the bisection (epsilon_time = epsilon*shutter_readout_time)
+
+    double lowerbound = -1, upbound = +1, mid, mid_reverse;
+    do
+    {
+      mid = .5 * (lowerbound + upbound);
+      mid_reverse = shutter_model_->getMotionFactor(project_internal(pose.pose(mid), pt3D));
+
+      if (mid_reverse < mid)
+      {
+        upbound = mid;
+      }
+      else
+      {
+        lowerbound = mid;
+      }
+    }
+    while ((epsilon < upbound - lowerbound) && (epsilon < std::abs(mid_reverse - mid)));
+
+    return project_internal(pose.pose(mid), pt3D);
+  }
+
+protected:
+  /**
+  * @brief Compute projection of a 3D point into the camera plane
+  * (Apply pose, disto (if any) and Intrinsics)
+  * @param pose Pose used to compute projection
+  * @param pt3D 3D-point to project on camera plane
+  * @return Projected (2D) point on camera plane
+  *
+  * @note This function is not aware of pose motion
+  */
+  Vec2 project_internal(
     const geometry::Pose3 & pose,
     const Vec3 & pt3D ) const
   {
@@ -100,6 +162,7 @@ struct IntrinsicBase : public Clonable<IntrinsicBase>
     }
   }
 
+public:
   /**
   * @brief Compute the residual between the 3D projected point and an image observation
   * @param pose Pose used to project point on camera plane
@@ -107,14 +170,18 @@ struct IntrinsicBase : public Clonable<IntrinsicBase>
   * @param x image observation
   * @brief Relative 2d distance between projected and observed points
   */
-  virtual Vec2 residual(
+  Vec2 residual(
     const geometry::Pose3 & pose,
     const Vec3 & X,
     const Vec2 & x ) const
   {
-    const Vec2 proj = this->project( pose, X );
+    const Vec2 proj = this->project( pose.hasMotion() ? pose.pose(shutter_model_->getMotionFactor(x)) : pose, X );
     return x - proj;
   }
+
+  // --
+  // Virtual members
+  // --
 
   /**
   * @brief Tell from which type the embed camera is
