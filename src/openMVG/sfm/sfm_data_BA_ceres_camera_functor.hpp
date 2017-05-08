@@ -21,6 +21,38 @@ namespace sfm {
 
 template <typename T>
 void ApplyPose(
+  const double motion_factor,
+  const T* const cam_extrinsics,
+  const T* const pos_3dpoint,
+  T* pos_proj)
+{
+  const T * cam_R = &cam_extrinsics[0];
+  const T * cam_C = &cam_extrinsics[3];
+
+  //--
+  // Prepare motion
+  //--
+  T motion = T(motion_factor);
+
+  const T cam_R_motion[3] = { motion * cam_extrinsics[6], motion * cam_extrinsics[ 7], motion * cam_extrinsics[ 8] };
+  const T cam_C_motion[3] = { motion * cam_extrinsics[9], motion * cam_extrinsics[10], motion * cam_extrinsics[11] };
+
+  //--
+  // Apply external parameters (Pose) including it's motion
+  //--
+
+  // Apply the camera center
+  pos_proj[0] = pos_3dpoint[0] - cam_C[0] - cam_C_motion[0];
+  pos_proj[1] = pos_3dpoint[1] - cam_C[1] - cam_C_motion[1];
+  pos_proj[2] = pos_3dpoint[2] - cam_C[2] - cam_C_motion[2];
+
+  // Rotate the point according the camera rotation
+  ceres::AngleAxisRotatePoint(cam_R_motion, pos_proj, pos_proj);
+  ceres::AngleAxisRotatePoint(cam_R, pos_proj, pos_proj);
+}
+
+template <typename T>
+void ApplyPose(
   const T* const cam_extrinsics,
   const T* const pos_3dpoint,
   T* pos_proj)
@@ -80,18 +112,19 @@ struct WeightedCostFunction
 /**
  * @brief Ceres functor to use a Pinhole_Intrinsic (pinhole camera model K[R[t]) and a 3D point.
  *
- *  Data parameter blocks are the following <2,3,6,3>
+ *  Data parameter blocks are the following <2,3,12,3>
  *  - 2 => dimension of the residuals,
  *  - 3 => the intrinsic data block [focal, principal point x, principal point y],
- *  - 6 => the camera extrinsic data block (camera orientation and position) [R;C],
- *         - rotation(angle axis), and center [rX,rY,rZ,cx,cy,cz].
+ *  - 12 => the camera extrinsic data block (camera orientation, camera position, orientation motion, position motiom) [R;C;m_R,m_C],
+ *         - rotation(angle axis), center, rotation motion(angle axis) and center motion [rX,rY,rZ,cx,cy,cz,m_rX,m_rY,m_rZ,m_cx,m_cy,m_cz].
  *  - 3 => a 3D point data block.
  *
  */
 struct ResidualErrorFunctor_Pinhole_Intrinsic
 {
-  ResidualErrorFunctor_Pinhole_Intrinsic(const double* const pos_2dpoint)
+  ResidualErrorFunctor_Pinhole_Intrinsic(const double* const pos_2dpoint, double motion_factor)
   :m_pos_2dpoint(pos_2dpoint)
+  ,m_motion_factor(motion_factor)
   {
   }
 
@@ -104,8 +137,8 @@ struct ResidualErrorFunctor_Pinhole_Intrinsic
 
   /**
    * @param[in] cam_intrinsics: Camera intrinsics( focal, principal point [x,y] )
-   * @param[in] cam_extrinsics: Camera parameterized using one block of 6 parameters [R;C]:
-   *   - 3 for rotation(angle axis), 3 for center
+   * @param[in] cam_extrinsics: Camera parameterized using one block of 12 parameters [R;C;m_R;m_C]:
+   *   - 3 for rotation(angle axis), 3 for center, 3 for rotation motion(angle_axis), 3 for center motion
    * @param[in] pos_3dpoint
    * @param[out] out_residuals
    */
@@ -121,7 +154,7 @@ struct ResidualErrorFunctor_Pinhole_Intrinsic
     //--
 
     T pos_proj[3];
-    ApplyPose(cam_extrinsics, pos_3dpoint, pos_proj);
+    ApplyPose(m_motion_factor, cam_extrinsics, pos_3dpoint, pos_proj);
 
     // Transform the point from homogeneous to euclidean (undistorted point)
     const T x_u = pos_proj[0] / pos_proj[2];
@@ -154,44 +187,47 @@ struct ResidualErrorFunctor_Pinhole_Intrinsic
   static ceres::CostFunction* Create
   (
     const Vec2 & observation,
-    const double weight = 0.0
+    const double weight = 0.0,
+    const double motion_factor = 0.0
   )
   {
     if (weight == 0.0)
     {
       return
         (new ceres::AutoDiffCostFunction
-          <ResidualErrorFunctor_Pinhole_Intrinsic, 2, 3, 6, 3>(
-            new ResidualErrorFunctor_Pinhole_Intrinsic(observation.data())));
+          <ResidualErrorFunctor_Pinhole_Intrinsic, 2, 3, 12, 3>(
+            new ResidualErrorFunctor_Pinhole_Intrinsic(observation.data(), motion_factor)));
     }
     else
     {
       return
         (new ceres::AutoDiffCostFunction
-          <WeightedCostFunction<ResidualErrorFunctor_Pinhole_Intrinsic>, 2, 3, 6, 3>
+          <WeightedCostFunction<ResidualErrorFunctor_Pinhole_Intrinsic>, 2, 3, 12, 3>
           (new WeightedCostFunction<ResidualErrorFunctor_Pinhole_Intrinsic>
-            (new ResidualErrorFunctor_Pinhole_Intrinsic(observation.data()), weight)));
+            (new ResidualErrorFunctor_Pinhole_Intrinsic(observation.data(), motion_factor), weight)));
     }
   }
 
   const double * m_pos_2dpoint; // The 2D observation
+  const double m_motion_factor; // Motion factor for 2D observation
 };
 
 /**
  * @brief Ceres functor to use a Pinhole_Intrinsic_Radial_K1
  *
- *  Data parameter blocks are the following <2,4,6,3>
+ *  Data parameter blocks are the following <2,4,12,3>
  *  - 2 => dimension of the residuals,
  *  - 4 => the intrinsic data block [focal, principal point x, principal point y, K1],
- *  - 6 => the camera extrinsic data block (camera orientation and position) [R;C],
- *         - rotation(angle axis), and center [rX,rY,rZ,cx,cy,cz].
+ *  - 12 => the camera extrinsic data block (camera orientation, camera position, orientation motion, position motiom) [R;C;m_R,m_C],
+ *         - rotation(angle axis), center, rotation motion(angle axis) and center motion [rX,rY,rZ,cx,cy,cz,m_rX,m_rY,m_rZ,m_cx,m_cy,m_cz].
  *  - 3 => a 3D point data block.
  *
  */
 struct ResidualErrorFunctor_Pinhole_Intrinsic_Radial_K1
 {
-  ResidualErrorFunctor_Pinhole_Intrinsic_Radial_K1(const double* const pos_2dpoint)
+  ResidualErrorFunctor_Pinhole_Intrinsic_Radial_K1(const double* const pos_2dpoint, double motion_factor)
   :m_pos_2dpoint(pos_2dpoint)
+  ,m_motion_factor(motion_factor)
   {
   }
 
@@ -205,8 +241,8 @@ struct ResidualErrorFunctor_Pinhole_Intrinsic_Radial_K1
 
   /**
    * @param[in] cam_intrinsics: Camera intrinsics( focal, principal point [x,y], K1 )
-   * @param[in] cam_extrinsics: Camera parameterized using one block of 6 parameters [R;C]:
-   *   - 3 for rotation(angle axis), 3 for center
+   * @param[in] cam_extrinsics: Camera parameterized using one block of 12 parameters [R;C;m_R;m_C]:
+   *   - 3 for rotation(angle axis), 3 for center, 3 for rotation motion(angle_axis), 3 for center motion
    * @param[in] pos_3dpoint
    * @param[out] out_residuals
    */
@@ -222,7 +258,7 @@ struct ResidualErrorFunctor_Pinhole_Intrinsic_Radial_K1
     //--
 
     T pos_proj[3];
-    ApplyPose(cam_extrinsics, pos_3dpoint, pos_proj);
+    ApplyPose(m_motion_factor, cam_extrinsics, pos_3dpoint, pos_proj);
 
     // Transform the point from homogeneous to euclidean (undistorted point)
     const T x_u = pos_proj[0] / pos_proj[2];
@@ -262,44 +298,47 @@ struct ResidualErrorFunctor_Pinhole_Intrinsic_Radial_K1
   static ceres::CostFunction* Create
   (
     const Vec2 & observation,
-    const double weight = 0.0
+    const double weight = 0.0,
+    const double motion_factor = 0.0
   )
   {
     if (weight == 0.0)
     {
       return
         (new ceres::AutoDiffCostFunction
-          <ResidualErrorFunctor_Pinhole_Intrinsic_Radial_K1, 2, 4, 6, 3>(
-            new ResidualErrorFunctor_Pinhole_Intrinsic_Radial_K1(observation.data())));
+          <ResidualErrorFunctor_Pinhole_Intrinsic_Radial_K1, 2, 4, 12, 3>(
+            new ResidualErrorFunctor_Pinhole_Intrinsic_Radial_K1(observation.data(), motion_factor)));
     }
     else
     {
       return
         (new ceres::AutoDiffCostFunction
-          <WeightedCostFunction<ResidualErrorFunctor_Pinhole_Intrinsic_Radial_K1>, 2, 4, 6, 3>
+          <WeightedCostFunction<ResidualErrorFunctor_Pinhole_Intrinsic_Radial_K1>, 2, 4, 12, 3>
           (new WeightedCostFunction<ResidualErrorFunctor_Pinhole_Intrinsic_Radial_K1>
-            (new ResidualErrorFunctor_Pinhole_Intrinsic_Radial_K1(observation.data()), weight)));
+            (new ResidualErrorFunctor_Pinhole_Intrinsic_Radial_K1(observation.data(), motion_factor), weight)));
     }
   }
 
   const double * m_pos_2dpoint; // The 2D observation
+  const double m_motion_factor; // Motion factor for 2D observation
 };
 
 /**
  * @brief Ceres functor to use a Pinhole_Intrinsic_Radial_K3
  *
- *  Data parameter blocks are the following <2,6,6,3>
+ *  Data parameter blocks are the following <2,6,12,3>
  *  - 2 => dimension of the residuals,
  *  - 6 => the intrinsic data block [focal, principal point x, principal point y, K1, K2, K3],
- *  - 6 => the camera extrinsic data block (camera orientation and position) [R;C],
- *         - rotation(angle axis), and center [rX,rY,rZ,cx,cy,cz].
+ *  - 12 => the camera extrinsic data block (camera orientation, camera position, orientation motion, position motiom) [R;C;m_R,m_C],
+ *         - rotation(angle axis), center, rotation motion(angle axis) and center motion [rX,rY,rZ,cx,cy,cz,m_rX,m_rY,m_rZ,m_cx,m_cy,m_cz].
  *  - 3 => a 3D point data block.
  *
  */
 struct ResidualErrorFunctor_Pinhole_Intrinsic_Radial_K3
 {
-  ResidualErrorFunctor_Pinhole_Intrinsic_Radial_K3(const double* const pos_2dpoint)
+  ResidualErrorFunctor_Pinhole_Intrinsic_Radial_K3(const double* const pos_2dpoint, double motion_factor)
   :m_pos_2dpoint(pos_2dpoint)
+  ,m_motion_factor(motion_factor)
   {
   }
 
@@ -315,8 +354,8 @@ struct ResidualErrorFunctor_Pinhole_Intrinsic_Radial_K3
 
   /**
    * @param[in] cam_intrinsics: Camera intrinsics( focal, principal point [x,y], k1, k2, k3 )
-   * @param[in] cam_extrinsics: Camera parameterized using one block of 6 parameters [R;C]:
-   *   - 3 for rotation(angle axis), 3 for center
+   * @param[in] cam_extrinsics: Camera parameterized using one block of 12 parameters [R;C;m_R;m_C]:
+   *   - 3 for rotation(angle axis), 3 for center, 3 for rotation motion(angle_axis), 3 for center motion
    * @param[in] pos_3dpoint
    * @param[out] out_residuals
    */
@@ -332,7 +371,7 @@ struct ResidualErrorFunctor_Pinhole_Intrinsic_Radial_K3
     //--
 
     T pos_proj[3];
-    ApplyPose(cam_extrinsics, pos_3dpoint, pos_proj);
+    ApplyPose(m_motion_factor, cam_extrinsics, pos_3dpoint, pos_proj);
 
     // Transform the point from homogeneous to euclidean (undistorted point)
     const T x_u = pos_proj[0] / pos_proj[2];
@@ -376,44 +415,47 @@ struct ResidualErrorFunctor_Pinhole_Intrinsic_Radial_K3
   static ceres::CostFunction* Create
   (
     const Vec2 & observation,
-    const double weight = 0.0
+    const double weight = 0.0,
+    const double motion_factor = 0.0
   )
   {
     if (weight == 0.0)
     {
       return
         (new ceres::AutoDiffCostFunction
-          <ResidualErrorFunctor_Pinhole_Intrinsic_Radial_K3, 2, 6, 6, 3>(
-            new ResidualErrorFunctor_Pinhole_Intrinsic_Radial_K3(observation.data())));
+          <ResidualErrorFunctor_Pinhole_Intrinsic_Radial_K3, 2, 6, 12, 3>(
+            new ResidualErrorFunctor_Pinhole_Intrinsic_Radial_K3(observation.data(), motion_factor)));
     }
     else
     {
       return
         (new ceres::AutoDiffCostFunction
-          <WeightedCostFunction<ResidualErrorFunctor_Pinhole_Intrinsic_Radial_K3>, 2, 6, 6, 3>
+          <WeightedCostFunction<ResidualErrorFunctor_Pinhole_Intrinsic_Radial_K3>, 2, 6, 12, 3>
           (new WeightedCostFunction<ResidualErrorFunctor_Pinhole_Intrinsic_Radial_K3>
-            (new ResidualErrorFunctor_Pinhole_Intrinsic_Radial_K3(observation.data()), weight)));
+            (new ResidualErrorFunctor_Pinhole_Intrinsic_Radial_K3(observation.data(), motion_factor), weight)));
     }
   }
 
   const double * m_pos_2dpoint; // The 2D observation
+  const double m_motion_factor; // Motion factor for 2D observation
 };
 
 /**
  * @brief Ceres functor with constrained 3D points to use a Pinhole_Intrinsic_Brown_T2
  *
- *  Data parameter blocks are the following <2,8,6,3>
+ *  Data parameter blocks are the following <2,8,12,3>
  *  - 2 => dimension of the residuals,
  *  - 8 => the intrinsic data block [focal, principal point x, principal point y, K1, K2, K3, T1, T2],
- *  - 6 => the camera extrinsic data block (camera orientation and position) [R;C],
- *         - rotation(angle axis), and center [rX,rY,rZ,cx,cy,cz].
+ *  - 12 => the camera extrinsic data block (camera orientation, camera position, orientation motion, position motiom) [R;C;m_R,m_C],
+ *         - rotation(angle axis), center, rotation motion(angle axis) and center motion [rX,rY,rZ,cx,cy,cz,m_rX,m_rY,m_rZ,m_cx,m_cy,m_cz].
  *  - 3 => a 3D point data block.
  *
  */
 struct ResidualErrorFunctor_Pinhole_Intrinsic_Brown_T2
 {
-  ResidualErrorFunctor_Pinhole_Intrinsic_Brown_T2(const double* const pos_2dpoint)
+  ResidualErrorFunctor_Pinhole_Intrinsic_Brown_T2(const double* const pos_2dpoint, double motion_factor)
   :m_pos_2dpoint(pos_2dpoint)
+  ,m_motion_factor(motion_factor)
   {
   }
 
@@ -431,8 +473,8 @@ struct ResidualErrorFunctor_Pinhole_Intrinsic_Brown_T2
 
   /**
    * @param[in] cam_intrinsics: Camera intrinsics( focal, principal point [x,y], k1, k2, k3, t1, t2 )
-   * @param[in] cam_extrinsics: Camera parameterized using one block of 6 parameters [R;C]:
-   *   - 3 for rotation(angle axis), 3 for center
+   * @param[in] cam_extrinsics: Camera parameterized using one block of 12 parameters [R;C;m_R;m_C]:
+   *   - 3 for rotation(angle axis), 3 for center, 3 for rotation motion(angle_axis), 3 for center motion
    * @param[in] pos_3dpoint
    * @param[out] out_residuals
    */
@@ -448,7 +490,7 @@ struct ResidualErrorFunctor_Pinhole_Intrinsic_Brown_T2
     //--
 
     T pos_proj[3];
-    ApplyPose(cam_extrinsics, pos_3dpoint, pos_proj);
+    ApplyPose(m_motion_factor, cam_extrinsics, pos_3dpoint, pos_proj);
 
     // Transform the point from homogeneous to euclidean (undistorted point)
     const T x_u = pos_proj[0] / pos_proj[2];
@@ -496,46 +538,49 @@ struct ResidualErrorFunctor_Pinhole_Intrinsic_Brown_T2
   static ceres::CostFunction* Create
   (
     const Vec2 & observation,
-    const double weight = 0.0
+    const double weight = 0.0,
+    const double motion_factor = 0.0
   )
   {
     if (weight == 0.0)
     {
       return
         (new ceres::AutoDiffCostFunction
-          <ResidualErrorFunctor_Pinhole_Intrinsic_Brown_T2, 2, 8, 6, 3>(
-            new ResidualErrorFunctor_Pinhole_Intrinsic_Brown_T2(observation.data())));
+          <ResidualErrorFunctor_Pinhole_Intrinsic_Brown_T2, 2, 8, 12, 3>(
+            new ResidualErrorFunctor_Pinhole_Intrinsic_Brown_T2(observation.data(), motion_factor)));
     }
     else
     {
       return
         (new ceres::AutoDiffCostFunction
-          <WeightedCostFunction<ResidualErrorFunctor_Pinhole_Intrinsic_Brown_T2>, 2, 8, 6, 3>
+          <WeightedCostFunction<ResidualErrorFunctor_Pinhole_Intrinsic_Brown_T2>, 2, 8, 12, 3>
           (new WeightedCostFunction<ResidualErrorFunctor_Pinhole_Intrinsic_Brown_T2>
-            (new ResidualErrorFunctor_Pinhole_Intrinsic_Brown_T2(observation.data()), weight)));
+            (new ResidualErrorFunctor_Pinhole_Intrinsic_Brown_T2(observation.data(), motion_factor), weight)));
     }
   }
 
   const double * m_pos_2dpoint; // The 2D observation
+  const double m_motion_factor; // Motion factor for 2D observation
 };
 
 
 /**
  * @brief Ceres functor with constrained 3D points to use a Pinhole_Intrinsic_Fisheye
  *
- *  Data parameter blocks are the following <2,8,6,3>
+ *  Data parameter blocks are the following <2,8,12,3>
  *  - 2 => dimension of the residuals,
  *  - 7 => the intrinsic data block [focal, principal point x, principal point y, K1, K2, K3, K4],
- *  - 6 => the camera extrinsic data block (camera orientation and position) [R;C],
- *         - rotation(angle axis), and center [rX,rY,rZ,cx,cy,cz].
+ *  - 12 => the camera extrinsic data block (camera orientation, camera position, orientation motion, position motiom) [R;C;m_R,m_C],
+ *         - rotation(angle axis), center, rotation motion(angle axis) and center motion [rX,rY,rZ,cx,cy,cz,m_rX,m_rY,m_rZ,m_cx,m_cy,m_cz].
  *  - 3 => a 3D point data block.
  *
  */
 
 struct ResidualErrorFunctor_Pinhole_Intrinsic_Fisheye
 {
-  ResidualErrorFunctor_Pinhole_Intrinsic_Fisheye(const double* const pos_2dpoint)
+  ResidualErrorFunctor_Pinhole_Intrinsic_Fisheye(const double* const pos_2dpoint, double motion_factor)
   :m_pos_2dpoint(pos_2dpoint)
+  ,m_motion_factor(motion_factor)
   {
   }
 
@@ -552,8 +597,8 @@ struct ResidualErrorFunctor_Pinhole_Intrinsic_Fisheye
 
   /**
    * @param[in] cam_intrinsics: Camera intrinsics( focal, principal point [x,y], k1, k2, k3, k4 )
-   * @param[in] cam_extrinsics: Camera parameterized using one block of 6 parameters [R;C]:
-   *   - 3 for rotation(angle axis), 3 for center
+   * @param[in] cam_extrinsics: Camera parameterized using one block of 12 parameters [R;C;m_R;m_C]:
+   *   - 3 for rotation(angle axis), 3 for center, 3 for rotation motion(angle_axis), 3 for center motion
    * @param[in] pos_3dpoint
    * @param[out] out_residuals
    */
@@ -569,7 +614,7 @@ struct ResidualErrorFunctor_Pinhole_Intrinsic_Fisheye
     //--
 
     T pos_proj[3];
-    ApplyPose(cam_extrinsics, pos_3dpoint, pos_proj);
+    ApplyPose(m_motion_factor, cam_extrinsics, pos_3dpoint, pos_proj);
 
     // Transform the point from homogeneous to euclidean (undistorted point)
     const T x_u = pos_proj[0] / pos_proj[2];
@@ -624,27 +669,29 @@ struct ResidualErrorFunctor_Pinhole_Intrinsic_Fisheye
   static ceres::CostFunction* Create
   (
     const Vec2 & observation,
-    const double weight = 0.0
+    const double weight = 0.0,
+          const double motion_factor = 0.0
   )
   {
     if (weight == 0.0)
     {
       return
         (new ceres::AutoDiffCostFunction
-          <ResidualErrorFunctor_Pinhole_Intrinsic_Fisheye, 2, 7, 6, 3>(
-            new ResidualErrorFunctor_Pinhole_Intrinsic_Fisheye(observation.data())));
+          <ResidualErrorFunctor_Pinhole_Intrinsic_Fisheye, 2, 7, 12, 3>(
+            new ResidualErrorFunctor_Pinhole_Intrinsic_Fisheye(observation.data(), motion_factor)));
     }
     else
     {
       return
         (new ceres::AutoDiffCostFunction
-          <WeightedCostFunction<ResidualErrorFunctor_Pinhole_Intrinsic_Fisheye>, 2, 7, 6, 3>
+          <WeightedCostFunction<ResidualErrorFunctor_Pinhole_Intrinsic_Fisheye>, 2, 7, 12, 3>
           (new WeightedCostFunction<ResidualErrorFunctor_Pinhole_Intrinsic_Fisheye>
-            (new ResidualErrorFunctor_Pinhole_Intrinsic_Fisheye(observation.data()), weight)));
+            (new ResidualErrorFunctor_Pinhole_Intrinsic_Fisheye(observation.data(), motion_factor), weight)));
     }
   }
 
   const double * m_pos_2dpoint; // The 2D observation
+  const double m_motion_factor; // Motion factor for 2D observation
 };
 
 } // namespace sfm

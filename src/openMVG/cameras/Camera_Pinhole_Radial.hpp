@@ -83,6 +83,11 @@ class Pinhole_Intrinsic_Radial_K1 : public Pinhole_Intrinsic
     /// center of distortion is applied by the Intrinsics class
     std::vector<double> params_; // K1
 
+    void initialize(double k1)
+    {
+      params_ = {k1};
+    }
+
   public:
 
     /**
@@ -100,7 +105,7 @@ class Pinhole_Intrinsic_Radial_K1 : public Pinhole_Intrinsic
       double k1 = 0.0 )
       : Pinhole_Intrinsic( w, h, focal, ppx, ppy )
     {
-      params_ = {k1};
+      initialize( k1 );
     }
 
     ~Pinhole_Intrinsic_Radial_K1() override = default;
@@ -178,10 +183,8 @@ class Pinhole_Intrinsic_Radial_K1 : public Pinhole_Intrinsic
     {
       if ( params.size() == 4 )
       {
-        *this = Pinhole_Intrinsic_Radial_K1(
-                  w_, h_,
-                  params[0], params[1], params[2], // focal, ppx, ppy
-                  params[3] ); //K1
+        Pinhole_Intrinsic::initialize( params[0], params[1], params[2] ); // focal, ppx, ppy
+        Pinhole_Intrinsic_Radial_K1::initialize( params[3] ); //K1
         return true;
       }
       else
@@ -299,6 +302,11 @@ class Pinhole_Intrinsic_Radial_K3 : public Pinhole_Intrinsic
     /// K1, K2, K3
     std::vector<double> params_;
 
+    void initialize(double k1, double k2, double k3)
+    {
+      params_ = {k1, k2, k3};
+    }
+
   public:
 
     /**
@@ -318,7 +326,7 @@ class Pinhole_Intrinsic_Radial_K3 : public Pinhole_Intrinsic
       double k1 = 0.0, double k2 = 0.0, double k3 = 0.0 )
       : Pinhole_Intrinsic( w, h, focal, ppx, ppy )
     {
-      params_ = {k1, k2, k3};
+      initialize( k1, k2, k3 );
     }
 
     ~Pinhole_Intrinsic_Radial_K3() override = default;
@@ -395,12 +403,11 @@ class Pinhole_Intrinsic_Radial_K3 : public Pinhole_Intrinsic
     */
     bool updateFromParams( const std::vector<double> & params ) override
     {
+
       if ( params.size() == 6 )
       {
-        *this = Pinhole_Intrinsic_Radial_K3(
-                  w_, h_,
-                  params[0], params[1], params[2], // focal, ppx, ppy
-                  params[3], params[4], params[5] ); // K1, K2, K3
+        Pinhole_Intrinsic::initialize(params[0], params[1], params[2]); // focal, ppx, ppy
+        Pinhole_Intrinsic_Radial_K3::initialize(params[3], params[4], params[5]); // K1, K2, K3
         return true;
       }
       else

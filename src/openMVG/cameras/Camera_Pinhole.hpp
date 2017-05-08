@@ -41,6 +41,12 @@ class Pinhole_Intrinsic : public IntrinsicBase
     /// Inverse of intrinsic matrix
     Mat3 Kinv_;
 
+    void initialize(double focal_length_pix, double ppx, double ppy)
+    {
+      K_ << focal_length_pix, 0., ppx, 0., focal_length_pix, ppy, 0., 0., 1.;
+      Kinv_ = K_.inverse();
+    }
+
   public:
 
     /**
@@ -57,8 +63,7 @@ class Pinhole_Intrinsic : public IntrinsicBase
       double ppx = 0.0, double ppy = 0.0 )
       : IntrinsicBase( w, h )
     {
-      K_ << focal_length_pix, 0., ppx, 0., focal_length_pix, ppy, 0., 0., 1.;
-      Kinv_ = K_.inverse();
+      initialize(focal_length_pix, ppx, ppy);
     }
 
     /**
@@ -215,7 +220,7 @@ class Pinhole_Intrinsic : public IntrinsicBase
     {
       if ( params.size() == 3 )
       {
-        *this = Pinhole_Intrinsic( w_, h_, params[0], params[1], params[2] );
+        initialize( params[0], params[1], params[2] );
         return true;
       }
       else
@@ -294,7 +299,7 @@ class Pinhole_Intrinsic : public IntrinsicBase
       ar( cereal::make_nvp( "focal_length", focal_length ) );
       std::vector<double> pp( 2 );
       ar( cereal::make_nvp( "principal_point", pp ) );
-      *this = Pinhole_Intrinsic( w_, h_, focal_length, pp[0], pp[1] );
+      initialize( focal_length, pp[0], pp[1] );
     }
 
     /**

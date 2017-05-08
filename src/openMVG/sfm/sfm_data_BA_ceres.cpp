@@ -60,17 +60,14 @@ struct PoseCenterConstraintCostFunction
     const T sensor_t[3] = { T(pose_sensor_translation_(0)), T(pose_sensor_translation_(1)), T(pose_sensor_translation_(2)) };
     const T sensor_R_transpose[3] = {-sensor_R[0], -sensor_R[1], -sensor_R[2]};
 
-    T cam_t[3];
-    ceres::AngleAxisRotatePoint(cam_R, cam_C, cam_t);
-    cam_t[0] = - cam_t[0];
-    cam_t[1] = - cam_t[1];
-    cam_t[2] = - cam_t[2];
 
     // Here is a brief summary of what should happen below:
     // Calculate sensor's position in world coordinate using camera extrinsics and use that value for residual
     // ---------------
     // step 1) C_sensor_in_camera_space = inv(R_sensor) * ([0 0 0] - t_sensor)
     // step 2) C_sensor_in_world_space  = inv(R_camera) * (C_sensor_in_camera_space - t_camera)
+    // step 2) C_sensor_in_world_space  = inv(R_camera) * (C_sensor_in_camera_space + R_camera * C_camera)
+    // step 2) C_sensor_in_world_space  = inv(R_camera) * C_sensor_in_camera_space + C_camera)
     // step 3) residual = weight * (C_sensor_in_world_space - pose_center_constraint)
 
 
@@ -92,13 +89,11 @@ struct PoseCenterConstraintCostFunction
     // this is constant and should be computed in contructor
     ceres::AngleAxisRotatePoint(sensor_R_transpose, pt, C_sensor_in_camera_space);
 
-    // pt = C_sensor_in_camera_space - t_camera
-    pt[0] = C_sensor_in_camera_space[0] - cam_t[0];
-    pt[1] = C_sensor_in_camera_space[1] - cam_t[1];
-    pt[2] = C_sensor_in_camera_space[2] - cam_t[2];
-
     // step 2
     ceres::AngleAxisRotatePoint(cam_R_transpose, pt, C_sensor_in_world_space);
+    C_sensor_in_world_space[0] += cam_C[0];
+    C_sensor_in_world_space[1] += cam_C[1];
+    C_sensor_in_world_space[2] += cam_C[2];
 
     // step 3
     residuals[0] = T(weight_[0]) * (C_sensor_in_world_space[0] - T(pose_center_constraint_[0]));
@@ -118,22 +113,23 @@ ceres::CostFunction * IntrinsicsToCostFunction
   const double weight
 )
 {
+  const double motion_factor = intrinsic->getShutterModel()->getMotionFactor(observation);
   switch(intrinsic->getType())
   {
     case PINHOLE_CAMERA:
-      return ResidualErrorFunctor_Pinhole_Intrinsic::Create(observation, weight);
+      return ResidualErrorFunctor_Pinhole_Intrinsic::Create(observation, weight, motion_factor);
      break;
     case PINHOLE_CAMERA_RADIAL1:
-      return ResidualErrorFunctor_Pinhole_Intrinsic_Radial_K1::Create(observation, weight);
+      return ResidualErrorFunctor_Pinhole_Intrinsic_Radial_K1::Create(observation, weight, motion_factor);
     break;
     case PINHOLE_CAMERA_RADIAL3:
-      return ResidualErrorFunctor_Pinhole_Intrinsic_Radial_K3::Create(observation, weight);
+      return ResidualErrorFunctor_Pinhole_Intrinsic_Radial_K3::Create(observation, weight, motion_factor);
     break;
     case PINHOLE_CAMERA_BROWN:
-      return ResidualErrorFunctor_Pinhole_Intrinsic_Brown_T2::Create(observation, weight);
+      return ResidualErrorFunctor_Pinhole_Intrinsic_Brown_T2::Create(observation, weight, motion_factor);
     break;
     case PINHOLE_CAMERA_FISHEYE:
-      return ResidualErrorFunctor_Pinhole_Intrinsic_Fisheye::Create(observation, weight);
+      return ResidualErrorFunctor_Pinhole_Intrinsic_Fisheye::Create(observation, weight, motion_factor);
     default:
       return nullptr;
   }
@@ -206,7 +202,7 @@ bool Bundle_Adjustment_Ceres::Adjust
   //----------
   // Add camera parameters
   // - intrinsics
-  // - poses [R|t]
+  // - poses [R|C]
 
   // Create residuals for each observation in the bundle adjustment problem. The
   // parameters for cameras and points are added automatically.
@@ -290,14 +286,19 @@ bool Bundle_Adjustment_Ceres::Adjust
     const Pose3 & pose = pose_it.second;
     const Mat3 R = pose.rotation();
     const Vec3 C = pose.center();
+    const Mat3 m_R = pose.getIncrementalRotation().toRotationMatrix();
+    const Vec3 m_t = pose.getIncrementalTranslation();
 
-    double angleAxis[3];
+    double angleAxis[3], motion_angleAxis[3];
     ceres::RotationMatrixToAngleAxis((const double*)R.data(), angleAxis);
-    // angleAxis + center
-    map_poses[indexPose] = {angleAxis[0], angleAxis[1], angleAxis[2], C(0), C(1), C(2)};
+    ceres::RotationMatrixToAngleAxis((const double*)m_R.data(), motion_angleAxis);
+
+    // angleAxis + center + motion_angleAxis + motion_translation
+    map_poses[indexPose] = {angleAxis[0], angleAxis[1], angleAxis[2], C(0), C(1), C(2),
+                            motion_angleAxis[0], motion_angleAxis[1], motion_angleAxis[2], m_t(0), m_t(1), m_t(2)};
 
     double * parameter_block = &map_poses[indexPose][0];
-    problem.AddParameterBlock(parameter_block, 6);
+    problem.AddParameterBlock(parameter_block, 12);
     if (options.extrinsics_opt == Extrinsic_Parameter_Type::NONE)
     {
       // set the whole parameter block as constant for best performance
@@ -307,7 +308,7 @@ bool Bundle_Adjustment_Ceres::Adjust
     {
       std::vector<int> vec_constant_extrinsic;
       // If we don't adjust ROTATION, we must set ROTATION as constant
-      if ((options.extrinsics_opt & Extrinsic_Parameter_Type::ADJUST_ROTATION) == Extrinsic_Parameter_Type::NONE)
+      if ((options.extrinsics_opt & Extrinsic_Parameter_Type::ADJUST_ROTATION) != Extrinsic_Parameter_Type::ADJUST_ROTATION)
       {
         // Subset rotation parametrization
         vec_constant_extrinsic.push_back(0);
@@ -315,17 +316,33 @@ bool Bundle_Adjustment_Ceres::Adjust
         vec_constant_extrinsic.push_back(2);
       }
       // If we don't adjust TRANSLATION, we must set TRANSLATION as constant
-      if ((options.extrinsics_opt & Extrinsic_Parameter_Type::ADJUST_TRANSLATION) == Extrinsic_Parameter_Type::NONE)
+      if ((options.extrinsics_opt & Extrinsic_Parameter_Type::ADJUST_TRANSLATION) != Extrinsic_Parameter_Type::ADJUST_TRANSLATION)
       {
         // Subset translation parametrization
         vec_constant_extrinsic.push_back(3);
         vec_constant_extrinsic.push_back(4);
         vec_constant_extrinsic.push_back(5);
       }
+      // If we don't adjust MOTION_ROTATION, we must set MOTION_ROTATION as constant
+      if ((options.extrinsics_opt & Extrinsic_Parameter_Type::ADJUST_MOTION_ROTATION) != Extrinsic_Parameter_Type::ADJUST_MOTION_ROTATION)
+      {
+        // Subset translation parametrization
+        vec_constant_extrinsic.push_back(6);
+        vec_constant_extrinsic.push_back(7);
+        vec_constant_extrinsic.push_back(8);
+      }
+      // If we don't adjust MOTION_TRANSLATION, we must set MOTION_TRANSLATION as constant
+      if ((options.extrinsics_opt & Extrinsic_Parameter_Type::ADJUST_MOTION_TRANSLATION) != Extrinsic_Parameter_Type::ADJUST_MOTION_TRANSLATION)
+      {
+        // Subset translation parametrization
+        vec_constant_extrinsic.push_back(9);
+        vec_constant_extrinsic.push_back(10);
+        vec_constant_extrinsic.push_back(11);
+      }
       if (!vec_constant_extrinsic.empty())
       {
         ceres::SubsetParameterization *subset_parameterization =
-          new ceres::SubsetParameterization(6, vec_constant_extrinsic);
+          new ceres::SubsetParameterization(12, vec_constant_extrinsic);
         problem.SetParameterization(parameter_block, subset_parameterization);
       }
     }
@@ -453,7 +470,7 @@ bool Bundle_Adjustment_Ceres::Adjust
       {
         // Add the cost functor (distance from Pose prior to the SfM_Data Pose center)
         ceres::CostFunction * cost_function =
-          new ceres::AutoDiffCostFunction<PoseCenterConstraintCostFunction, 3, 6>(
+          new ceres::AutoDiffCostFunction<PoseCenterConstraintCostFunction, 3, 12>(
             new PoseCenterConstraintCostFunction(prior->pose_center_, prior->center_weight_, prior->pose_sensor_transform_));
 
         problem.AddResidualBlock(cost_function, new ceres::HuberLoss(Square(pose_center_robust_fitting_error)), &map_poses[prior->id_view][0]);
@@ -514,12 +531,16 @@ bool Bundle_Adjustment_Ceres::Adjust
       {
         const IndexT indexPose = pose_it.first;
 
-        Mat3 R_refined;
+        Mat3 R_refined, m_R_refined;
         ceres::AngleAxisToRotationMatrix(&map_poses[indexPose][0], R_refined.data());
         Vec3 C_refined(map_poses[indexPose][3], map_poses[indexPose][4], map_poses[indexPose][5]);
+
+        ceres::AngleAxisToRotationMatrix(&map_poses[indexPose][6], m_R_refined.data());
+        Vec3 m_C_refined(map_poses[indexPose][9], map_poses[indexPose][10], map_poses[indexPose][11]);
+
         // Update the pose
         Pose3 & pose = pose_it.second;
-        pose = Pose3(R_refined, C_refined);
+        pose = Pose3(R_refined, C_refined, AngleAxis(m_R_refined), m_C_refined);
       }
     }
 

@@ -32,6 +32,11 @@ class Pinhole_Intrinsic_Brown_T2 : public Pinhole_Intrinsic
     /// center of distortion is applied by the Intrinsics class
     std::vector<double> params_; // K1, K2, K3, T1, T2
 
+    void initialize(double k1, double k2, double k3, double t1, double t2)
+    {
+      params_ = {k1, k2, k3, t1, t2};
+    }
+
   public:
 
     /**
@@ -54,7 +59,7 @@ class Pinhole_Intrinsic_Brown_T2 : public Pinhole_Intrinsic
       double t1 = 0.0, double t2 = 0.0 )
       : Pinhole_Intrinsic( w, h, focal, ppx, ppy )
     {
-      params_ = {k1, k2, k3, t1, t2};
+      initialize( k1, k2, k3, t1, t2 );
     }
 
     /**
@@ -127,11 +132,8 @@ class Pinhole_Intrinsic_Brown_T2 : public Pinhole_Intrinsic
     {
       if ( params.size() == 8 )
       {
-        *this = Pinhole_Intrinsic_Brown_T2(
-                  w_, h_,
-                  params[0], params[1], params[2], // focal, ppx, ppy
-                  params[3], params[4], params[5], // K1, K2, K3
-                  params[6], params[7] );          // T1, T2
+        Pinhole_Intrinsic::initialize( params[0], params[1], params[2] ); // focal, ppx, ppy
+        Pinhole_Intrinsic_Brown_T2::initialize( params[3], params[4], params[5], params[6], params[7] ); // K1, K2, K3, T1, T2
         return true;
       }
       else

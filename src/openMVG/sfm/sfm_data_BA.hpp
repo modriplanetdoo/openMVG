@@ -17,10 +17,13 @@ struct SfM_Data;
 /// Enum to control which parameter(s) of the Camera motion must be refined or not
 enum class Extrinsic_Parameter_Type : int
 {
-  NONE                = 0x01,     // Extrinsic parameters will be considered as FIXED
-  ADJUST_ROTATION     = 0x02,
-  ADJUST_TRANSLATION  = 0x04,
-  ADJUST_ALL = ADJUST_ROTATION | ADJUST_TRANSLATION
+  NONE                      = 0x01,     // Extrinsic parameters will be considered as FIXED
+  ADJUST_ROTATION           = 0x02,
+  ADJUST_TRANSLATION        = 0x04,
+  ADJUST_MOTION_ROTATION    = 0x08,
+  ADJUST_MOTION_TRANSLATION = 0x10,
+  ADJUST_ALL = ADJUST_ROTATION | ADJUST_TRANSLATION,
+  ADJUST_ALL_WITH_MOTION = ADJUST_ALL | ADJUST_MOTION_ROTATION | ADJUST_MOTION_TRANSLATION
 };
 
 inline /*constexpr*/ Extrinsic_Parameter_Type
@@ -28,6 +31,13 @@ operator&(Extrinsic_Parameter_Type lhs, Extrinsic_Parameter_Type rhs)
 {
   return static_cast<Extrinsic_Parameter_Type>
       (static_cast<int>(lhs) & static_cast<int>(rhs));
+}
+
+inline /*constexpr*/ Extrinsic_Parameter_Type
+operator|(Extrinsic_Parameter_Type lhs, Extrinsic_Parameter_Type rhs)
+{
+  return static_cast<Extrinsic_Parameter_Type>
+      (static_cast<int>(lhs) | static_cast<int>(rhs));
 }
 
 /// Enum to control if the Structure must be refined or not

@@ -446,7 +446,7 @@ bool GlobalSfMReconstructionEngine_RelativeMotions::Adjust()
   }
 
   if (b_BA_Status && ReconstructionEngine::intrinsic_refinement_options_ != Intrinsic_Parameter_Type::NONE) {
-    // - refine all: Structure, motion:{rotations, translations} and optics:{intrinsics}
+    // - refine all: Structure, pose:{rotations, translations} and optics:{intrinsics}
     b_BA_Status = bundle_adjustment_obj.Adjust
       (
         sfm_data_,
@@ -501,7 +501,7 @@ bool GlobalSfMReconstructionEngine_RelativeMotions::Adjust()
   //--
   const Optimize_Options ba_refine_options(
     ReconstructionEngine::intrinsic_refinement_options_,
-    Extrinsic_Parameter_Type::ADJUST_ALL,  // adjust camera motion
+    Extrinsic_Parameter_Type::ADJUST_ALL_WITH_MOTION,  // adjust camera motion
     Structure_Parameter_Type::ADJUST_ALL,  // adjust scene structure
     Control_Point_Parameter(),
     this->b_use_motion_prior_);
@@ -512,6 +512,13 @@ bool GlobalSfMReconstructionEngine_RelativeMotions::Adjust()
     Save(sfm_data_,
       stlplus::create_filespec(stlplus::folder_part(sLogging_file_), "structure_04_outlier_removed", "ply"),
       ESfM_Data(EXTRINSICS | STRUCTURE));
+  }
+
+  for (const auto &pose : sfm_data_.poses) {
+      if (pose.second.hasMotion()) {
+          std::cout << "pose motion - translation:" << pose.second.getIncrementalTranslation().norm() << " -> " << pose.second.getIncrementalTranslation().transpose() << "\n";
+          std::cout << "pose motion - rotation   :" << R2D(pose.second.getIncrementalRotation().angle()) << "\n";
+      }
   }
 
   return b_BA_Status;

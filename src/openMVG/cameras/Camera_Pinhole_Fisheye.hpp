@@ -33,6 +33,10 @@ class Pinhole_Intrinsic_Fisheye : public Pinhole_Intrinsic
     /// center of distortion is applied by the Intrinsics class
     std::vector<double> params_; // K1, K2, K3, K4
 
+    void initialize(double k1, double k2, double k3, double k4)
+    {
+      params_ = {k1, k2, k3, k4};
+    }
 
   public:
 
@@ -54,7 +58,7 @@ class Pinhole_Intrinsic_Fisheye : public Pinhole_Intrinsic
       double k1 = 0.0, double k2 = 0.0, double k3 = 0.0, double k4 = 0.0 )
       : Pinhole_Intrinsic( w, h, focal, ppx, ppy )
     {
-      params_ = {k1, k2, k3, k4};
+      initialize( k1, k2, k3, k4 );
     }
 
     ~Pinhole_Intrinsic_Fisheye() override = default;
@@ -155,10 +159,8 @@ class Pinhole_Intrinsic_Fisheye : public Pinhole_Intrinsic
     {
       if ( params.size() == 7 )
       {
-        *this = Pinhole_Intrinsic_Fisheye(
-                  w_, h_,
-                  params[0], params[1], params[2], // focal, ppx, ppy
-                  params[3], params[4], params[5], params[6] ); // k1, k2, k3, k4
+        Pinhole_Intrinsic::initialize( params[0], params[1], params[2] ); // focal, ppx, ppy
+        Pinhole_Intrinsic_Fisheye::initialize( params[3], params[4], params[5], params[6] ); // k1, k2, k3, k4
         return true;
       }
       else
