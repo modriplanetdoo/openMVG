@@ -291,6 +291,7 @@ public:
   {
     ar( cereal::make_nvp( "width", w_ ) );
     ar( cereal::make_nvp( "height", h_ ) );
+    ar( cereal::make_nvp( "shutter_model", shutter_model_));
   }
 
   /**
@@ -302,6 +303,7 @@ public:
   {
     ar( cereal::make_nvp( "width", w_ ) );
     ar( cereal::make_nvp( "height", h_ ) );
+    ar( cereal::make_nvp( "shutter_model", shutter_model_));
   }
 
   /**

@@ -9,6 +9,8 @@
 
 #include "openMVG/numeric/numeric.h"
 
+#include <cereal/types/polymorphic.hpp>
+
 namespace openMVG
 {
 namespace cameras
@@ -35,6 +37,28 @@ public:
   unsigned int w_;
   /// Height of image
   unsigned int h_;
+
+  /**
+  * @brief Serialization out
+  * @param ar Archive
+  */
+  template <class Archive>
+  void save( Archive & ar ) const
+  {
+    ar( cereal::make_nvp( "width", w_ ) );
+    ar( cereal::make_nvp( "height", h_ ) );
+  }
+
+  /**
+  * @brief  Serialization in
+  * @param ar Archive
+  */
+  template <class Archive>
+  void load( Archive & ar )
+  {
+    ar( cereal::make_nvp( "width", w_ ) );
+    ar( cereal::make_nvp( "height", h_ ) );
+  }
 };
 
 
@@ -43,14 +67,36 @@ public:
 */
 class RollingShutter : public AbstractShutterModel  {
 public:
-  RollingShutter(unsigned int w, unsigned int h) : AbstractShutterModel(w, h) {
-    // nothing to do
+  RollingShutter() : RollingShutter(0, 0) {}
+  RollingShutter(unsigned int w, unsigned int h) : AbstractShutterModel(w, h)
+  {
+
   }
 
   virtual double getMotionFactor(const openMVG::Vec2 &x) const override {
     const double row = x(1);
 
     return row / h_ * 2 - 1;
+  }
+
+  /**
+  * @brief Serialization out
+  * @param ar Archive
+  */
+  template <class Archive>
+  void save( Archive & ar ) const
+  {
+    AbstractShutterModel::save(ar);
+  }
+
+  /**
+  * @brief  Serialization in
+  * @param ar Archive
+  */
+  template <class Archive>
+  void load( Archive & ar )
+  {
+    AbstractShutterModel::load(ar);
   }
 };
 
@@ -59,15 +105,43 @@ public:
 */
 class GlobalShutter : public AbstractShutterModel  {
 public:
-  GlobalShutter(unsigned int w, unsigned int h) : AbstractShutterModel(w, h) {
-    // nothing to do
+  GlobalShutter() : GlobalShutter(0, 0) {}
+  GlobalShutter(unsigned int w, unsigned int h) : AbstractShutterModel(w, h)
+  {
+
   }
 
   virtual double getMotionFactor(const openMVG::Vec2 &x) const override {
     return 0.0;
   }
+
+  /**
+  * @brief Serialization out
+  * @param ar Archive
+  */
+  template <class Archive>
+  void save( Archive & ar ) const
+  {
+    AbstractShutterModel::save(ar);
+  }
+
+  /**
+  * @brief  Serialization in
+  * @param ar Archive
+  */
+  template <class Archive>
+  void load( Archive & ar )
+  {
+    AbstractShutterModel::load(ar);
+  }
 };
 } // namespace cameras
 } // namespace openMVG
+
+CEREAL_REGISTER_TYPE_WITH_NAME( openMVG::cameras::GlobalShutter, "global_shutter" );
+CEREAL_REGISTER_POLYMORPHIC_RELATION(openMVG::cameras::AbstractShutterModel, openMVG::cameras::GlobalShutter);
+
+CEREAL_REGISTER_TYPE_WITH_NAME( openMVG::cameras::RollingShutter, "rolling_shutter" );
+CEREAL_REGISTER_POLYMORPHIC_RELATION(openMVG::cameras::AbstractShutterModel, openMVG::cameras::RollingShutter);
 
 #endif // #ifndef OPENMVG_CAMERAS_SHUTTER_MODEL_HPP

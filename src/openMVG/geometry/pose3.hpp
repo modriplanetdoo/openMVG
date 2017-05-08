@@ -9,6 +9,7 @@
 
 #include "openMVG/multiview/projection.hpp"
 #include <cereal/cereal.hpp> // Serialization
+#include <cereal/types/polymorphic.hpp>
 
 namespace openMVG
 {
@@ -201,17 +202,33 @@ class Pose3
     template <class Archive>
     void save( Archive & ar ) const
     {
-      const std::vector<std::vector<double>> mat =
+      const std::vector<std::vector<double>> R =
       {
         { rotation_( 0, 0 ), rotation_( 0, 1 ), rotation_( 0, 2 ) },
         { rotation_( 1, 0 ), rotation_( 1, 1 ), rotation_( 1, 2 ) },
         { rotation_( 2, 0 ), rotation_( 2, 1 ), rotation_( 2, 2 ) }
       };
 
-      ar( cereal::make_nvp( "rotation", mat ) );
+      ar( cereal::make_nvp( "rotation", R ) );
 
-      const std::vector<double> vec = { center_( 0 ), center_( 1 ), center_( 2 ) };
-      ar( cereal::make_nvp( "center", vec ) );
+      const std::vector<double> C = { center_( 0 ), center_( 1 ), center_( 2 ) };
+      ar( cereal::make_nvp( "center", C ) );
+
+      if (hasMotion())
+      {
+        Mat3 incremental_rotation = incremental_rotation_.toRotationMatrix();
+        const std::vector<std::vector<double>> R_motion =
+        {
+          { incremental_rotation( 0, 0 ), incremental_rotation( 0, 1 ), incremental_rotation( 0, 2 ) },
+          { incremental_rotation( 1, 0 ), incremental_rotation( 1, 1 ), incremental_rotation( 1, 2 ) },
+          { incremental_rotation( 2, 0 ), incremental_rotation( 2, 1 ), incremental_rotation( 2, 2 ) }
+        };
+
+        ar( cereal::make_nvp( "rotation_motion", R_motion ) );
+
+        const std::vector<double> C_motion = { incremental_translation_( 0 ), incremental_translation_( 1 ), incremental_translation_( 2 ) };
+        ar( cereal::make_nvp( "center_motion", C_motion ) );
+      }
     }
 
     /**
@@ -231,6 +248,25 @@ class Pose3
       std::vector<double> vec( 3 );
       ar( cereal::make_nvp( "center", vec ) );
       center_ = Eigen::Map<const Vec3>( &vec[0] );
+
+      try
+      {
+        ar( cereal::make_nvp( "rotation_motion", mat ) );
+        // copy back to the incremental_rotation
+        Mat3 incremental_rotation;
+        incremental_rotation.row( 0 ) = Eigen::Map<const Vec3>( &( mat[0][0] ) );
+        incremental_rotation.row( 1 ) = Eigen::Map<const Vec3>( &( mat[1][0] ) );
+        incremental_rotation.row( 2 ) = Eigen::Map<const Vec3>( &( mat[2][0] ) );
+        incremental_rotation_ = AngleAxis(incremental_rotation);
+
+        ar( cereal::make_nvp( "center_motion", vec ) );
+        incremental_translation_ = Eigen::Map<const Vec3>( &vec[0] );
+      }
+      catch( cereal::Exception e )
+      {
+        incremental_rotation_ = AngleAxis(Mat3::Identity());
+        incremental_translation_ = Vec3::Zero();
+      }
     }
 };
 
