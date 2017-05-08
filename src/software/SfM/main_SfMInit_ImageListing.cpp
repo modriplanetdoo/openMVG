@@ -129,6 +129,7 @@ int main(int argc, char **argv)
   std::pair<bool, Vec3> prior_w_info(false, Vec3(1.0,1.0,1.0));
 
   int i_User_camera_model = PINHOLE_CAMERA_RADIAL3;
+  int i_User_shutter_model = GLOBAL_SHUTTER;
 
   bool b_Group_camera_model = true;
 
@@ -141,6 +142,7 @@ int main(int argc, char **argv)
   cmd.add( make_option('k', sKmatrix, "intrinsics") );
   cmd.add( make_option('c', i_User_camera_model, "camera_model") );
   cmd.add( make_option('g', b_Group_camera_model, "group_camera_model") );
+  cmd.add( make_option('s', i_User_shutter_model, "shutter_model") );
   cmd.add( make_switch('P', "use_pose_prior") );
   cmd.add( make_option('W', sPriorWeights, "prior_weigths"));
 
@@ -163,8 +165,11 @@ int main(int argc, char **argv)
       << "[-g|--group_camera_model]\n"
       << "\t 0-> each view have it's own camera intrinsic parameters,\n"
       << "\t 1-> (default) view can share some camera intrinsic parameters\n"
+      << "[-s|--shutter_model]\n"
+      << "\t 0-> Global shutter (default)\n"
+      << "\t 1-> Rolling shutter\n"
       << "\n"
-      << "[-P|--use_pose_prior] Use pose prior if GPS EXIF pose is available"
+      << "[-P|--use_pose_prior] Use pose prior if GPS EXIF pose is available\n"
       << "[-W|--prior_weigths] \"x;y;z;\" of weights for each dimension of the prior (default: 1.0)\n"
       << std::endl;
 
@@ -180,12 +185,14 @@ int main(int argc, char **argv)
             << "--focal " << focal_pixels << std::endl
             << "--intrinsics " << sKmatrix << std::endl
             << "--camera_model " << i_User_camera_model << std::endl
-            << "--group_camera_model " << b_Group_camera_model << std::endl;
+            << "--group_camera_model " << b_Group_camera_model << std::endl
+            << "--shutter_model " << i_User_shutter_model << std::endl;
 
   // Expected properties for each image
   double width = -1, height = -1, focal = -1, ppx = -1,  ppy = -1;
 
   const EINTRINSIC e_User_camera_model = EINTRINSIC(i_User_camera_model);
+  const EINTRINSIC e_User_shutter_model = EINTRINSIC(i_User_shutter_model);
 
   if ( !stlplus::folder_exists( sImageDir ) )
   {
@@ -361,15 +368,29 @@ int main(int argc, char **argv)
             (width, height, focal, ppx, ppy, 0.0, 0.0, 0.0);  // setup no distortion as initial guess
         break;
         case PINHOLE_CAMERA_BROWN:
-          intrinsic =std::make_shared<Pinhole_Intrinsic_Brown_T2>
+          intrinsic = std::make_shared<Pinhole_Intrinsic_Brown_T2>
             (width, height, focal, ppx, ppy, 0.0, 0.0, 0.0, 0.0, 0.0); // setup no distortion as initial guess
         break;
         case PINHOLE_CAMERA_FISHEYE:
-          intrinsic =std::make_shared<Pinhole_Intrinsic_Fisheye>
+          intrinsic = std::make_shared<Pinhole_Intrinsic_Fisheye>
             (width, height, focal, ppx, ppy, 0.0, 0.0, 0.0, 0.0); // setup no distortion as initial guess
         break;
         default:
           std::cerr << "Error: unknown camera model: " << (int) e_User_camera_model << std::endl;
+          return EXIT_FAILURE;
+      }
+
+      // Create the desired camera type
+      switch(e_User_shutter_model)
+      {
+        case GLOBAL_SHUTTER:
+          intrinsic->setShutterModel<GlobalShutter>();
+          break;
+        case ROLLING_SHUTTER:
+          intrinsic->setShutterModel<RollingShutter>();
+          break;
+        default:
+          std::cerr << "Error: unknown shutter model: " << (int) e_User_shutter_model << std::endl;
           return EXIT_FAILURE;
       }
     }

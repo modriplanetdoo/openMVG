@@ -45,6 +45,18 @@ enum EINTRINSIC
   PINHOLE_CAMERA_END
 };
 
+/**
+* @enum ESHUTTER List of usable sensor shutter types
+* @var GLOBAL_SHUTTER
+*   Global shutter is an ideal shutter where data from entire sensor is read instantaneously
+* @var ROLLING_SHUTTER
+*   Rolling shutter is a more common shutter type where data from sensor is read on line at a time from top to bottom
+*/
+enum ESHUTTER
+{
+  GLOBAL_SHUTTER = 0,
+  ROLLING_SHUTTER = 1,
+};
 
 /**
 * @brief Test if given intrinsic value is valid
