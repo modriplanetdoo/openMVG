@@ -127,6 +127,16 @@ $ git clone --recursive https://github.com/openMVG/openMVG.git
 6. Change the target to Release.
 7. Compile the libraries and binaries samples.
 
+Another options is to build with cmake in console. I recommend launching `VS2015 x64 Native Tools Command Prompt` which has build environment already set up.
+
+```shell
+git clone --recursive https://github.com/openMVG/openMVG.git
+mkdir openMVG-build
+cd openMVG-build
+cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX="c:/openMVG" -G "NMake Makefiles" ../openMVG/src/
+cmake --build . --target install
+```
+
 Mac compilation
 -------------------
 <a name="macos"></a>
@@ -171,7 +181,8 @@ So please consider using the CMAKE_INSTALL_PREFIX CMake variable to specify a lo
 
 Here is the syntax to add the variable to the cmake command (use absolute path):
 `-DCMAKE_INSTALL_PREFIX:STRING="YourInstallPath"`
-e.g `-DCMAKE_INSTALL_PREFIX:STRING="/home/user/Dev/github/openMVG_Build/openMVG_install"`
+e.g `-DCMAKE_INSTALL_PREFIX:STRING="/home/user/Dev/github/openMVG_Build/openMVG_install"`.
+Don't use `third_party` or `dependencies` in your installation path as this will cause problems.
 
 Perform `make` and `make install`.
 
@@ -182,6 +193,18 @@ find_package(OpenMVG REQUIRED)
 include_directories(${OPENMVG_INCLUDE_DIRS})
 add_executable(main main.cpp)
 target_link_libraries(main ${OPENMVG_LIBRARIES})
+```
+
+or with modern target-based approch (CMake 3.0+)
+
+```
+find_package(OpenMVG REQUIRED)
+add_executable(main main.cpp)
+target_link_libraries(main
+  PRIVATE
+    OpenMVG::openMVG_sfm
+    OpenMVG::openMVG_matching
+)
 ```
 
 Specify in CMake where OpenMVG has been installed by using the CMake OpenMVG_DIR variable

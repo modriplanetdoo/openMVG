@@ -18,6 +18,11 @@ list(REMOVE_ITEM lInftycomputervision_cpp ${REMOVEFILESUNITTEST})
 
 add_library(openMVG_lInftyComputerVision  ${lInftycomputervision_headers} ${lInftycomputervision_cpp})
 target_link_libraries(openMVG_lInftyComputerVision openMVG_linearProgramming)
+target_include_directories(openMVG_lInftyComputerVision
+  PUBLIC
+    $<INSTALL_INTERFACE:include>
+    $<INSTALL_INTERFACE:include/openMVG>
+)
 set_target_properties(openMVG_lInftyComputerVision PROPERTIES SOVERSION ${OPENMVG_VERSION_MAJOR} VERSION "${OPENMVG_VERSION_MAJOR}.${OPENMVG_VERSION_MINOR}")
 set_property(TARGET openMVG_lInftyComputerVision PROPERTY FOLDER OpenMVG)
 install(TARGETS openMVG_lInftyComputerVision DESTINATION lib EXPORT openMVG-targets)

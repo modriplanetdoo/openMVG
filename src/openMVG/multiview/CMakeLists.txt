@@ -31,8 +31,11 @@ target_link_libraries(
     ${CERES_LIBRARIES})
 target_include_directories(
   openMVG_multiview
+  PUBLIC
+    $<INSTALL_INTERFACE:include>
+    $<INSTALL_INTERFACE:include/openMVG>
   PRIVATE
-  ${CERES_INCLUDE_DIRS})
+    ${CERES_INCLUDE_DIRS})
 set_target_properties(openMVG_multiview PROPERTIES SOVERSION ${OPENMVG_VERSION_MAJOR} VERSION "${OPENMVG_VERSION_MAJOR}.${OPENMVG_VERSION_MINOR}")
 
 add_library(openMVG_multiview_test_data ${MULTIVIEWTESTDATA})

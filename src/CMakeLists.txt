@@ -594,7 +594,9 @@ message("\n")
 
 install(EXPORT openMVG-targets DESTINATION lib)
 install(EXPORT openMVG-targets
-        DESTINATION share/openMVG/cmake FILE OpenMVGTargets.cmake)
+  FILE OpenMVGTargets.cmake
+  NAMESPACE OpenMVG::
+  DESTINATION share/openMVG/cmake)
 
 #Adapt build include paths to install path
 set(OpenMVG_INCLUDE_DIRS
@@ -633,6 +635,10 @@ if (OpenMVG_USE_INTERNAL_CERES)
     "${OpenMVG_INCLUDE_DIRS}"
   )
 endif (OpenMVG_USE_INTERNAL_CERES)
+
+
+MESSAGE(STATUS "OpenMVG_INCLUDE_DIRS: ${OpenMVG_INCLUDE_DIRS}")
+MESSAGE(STATUS "OpenMVG_USE_INTERNAL_EIGEN: ${OpenMVG_USE_INTERNAL_EIGEN}")
 
 # Build OpenMVG_CFLAGS variable for export
 set(OpenMVG_CFLAGS "")

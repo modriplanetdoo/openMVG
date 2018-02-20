@@ -18,6 +18,9 @@ target_link_libraries(openMVG_linearProgramming
 )
 
 target_include_directories(openMVG_linearProgramming
+  PUBLIC
+    $<INSTALL_INTERFACE:include>
+    $<INSTALL_INTERFACE:include/openMVG>
   PRIVATE
     ${CLP_INCLUDE_DIRS}
     ${COINUTILS_INCLUDE_DIRS}

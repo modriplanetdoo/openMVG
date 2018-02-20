@@ -23,8 +23,18 @@ set_source_files_properties(${matching_files_cpp} PROPERTIES LANGUAGE CXX)
 add_library(openMVG_matching
   ${matching_files_header}
   ${matching_files_cpp})
-target_link_libraries(openMVG_matching PRIVATE openMVG_features stlplus)
-target_link_libraries(openMVG_matching PUBLIC Threads::Threads)
+target_link_libraries(openMVG_matching
+  PRIVATE
+    openMVG_features
+	  stlplus
+  PUBLIC
+    Threads::Threads
+)
+target_include_directories(openMVG_matching
+  PUBLIC
+    $<INSTALL_INTERFACE:include>
+    $<INSTALL_INTERFACE:include/openMVG>
+)
 set_target_properties(openMVG_matching PROPERTIES SOVERSION ${OPENMVG_VERSION_MAJOR} VERSION "${OPENMVG_VERSION_MAJOR}.${OPENMVG_VERSION_MINOR}")
 set_property(TARGET openMVG_matching PROPERTY FOLDER OpenMVG/OpenMVG)
 if (UNIX AND AVX2_FOUND)

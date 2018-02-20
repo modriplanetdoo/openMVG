@@ -31,8 +31,11 @@ target_link_libraries(
 )
 target_include_directories(
   openMVG_sfm
+  PUBLIC
+    $<INSTALL_INTERFACE:include>
+    $<INSTALL_INTERFACE:include/openMVG>
   PRIVATE
-  ${CERES_INCLUDE_DIRS})
+    ${CERES_INCLUDE_DIRS})
 set_target_properties(openMVG_sfm PROPERTIES SOVERSION ${OPENMVG_VERSION_MAJOR} VERSION "${OPENMVG_VERSION_MAJOR}.${OPENMVG_VERSION_MINOR}")
 
 install(TARGETS openMVG_sfm DESTINATION lib EXPORT openMVG-targets)

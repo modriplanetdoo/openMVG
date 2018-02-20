@@ -20,6 +20,11 @@ list(REMOVE_ITEM features_files_sources ${REMOVEFILESUNITTEST})
 set_source_files_properties(${features_files_sources} PROPERTIES LANGUAGE CXX)
 add_library(openMVG_features ${features_files_sources} ${features_files_headers})
 target_link_libraries(openMVG_features fast)
+target_include_directories(openMVG_features
+  PUBLIC
+    $<INSTALL_INTERFACE:include>
+    $<INSTALL_INTERFACE:include/openMVG>
+)
 set_target_properties(openMVG_features PROPERTIES SOVERSION ${OPENMVG_VERSION_MAJOR} VERSION "${OPENMVG_VERSION_MAJOR}.${OPENMVG_VERSION_MINOR}")
 install(TARGETS openMVG_features DESTINATION lib EXPORT openMVG-targets)
 set_property(TARGET openMVG_features PROPERTY FOLDER OpenMVG/OpenMVG)
