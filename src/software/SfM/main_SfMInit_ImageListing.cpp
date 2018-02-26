@@ -178,7 +178,10 @@ int main(int argc, char **argv)
       << "\t 3: Pinhole radial 3 (default)\n"
       << "\t 4: Pinhole brown 2\n"
       << "\t 5: Pinhole with a simple Fish-eye distortion\n"
-      << "\t 7: Spherical camera\n"
+      << "\t 6: Pinhole radial 3 - rational (variant 1)\n"
+      << "\t 7: Pinhole radial 3 - rational (variant 2)\n"
+      << "\t 8: Pinhole radial 3 - rational (variant 3)\n"
+      << "\t 9: Spherical camera\n"
       << "[-g|--group_camera_model]\n"
       << "\t 0-> each view have it's own camera intrinsic parameters,\n"
       << "\t 1-> (default) view can share some camera intrinsic parameters\n"
@@ -391,6 +394,22 @@ int main(int argc, char **argv)
         case PINHOLE_CAMERA_FISHEYE:
           intrinsic = std::make_shared<Pinhole_Intrinsic_Fisheye>
             (width, height, focal, ppx, ppy, 0.0, 0.0, 0.0, 0.0); // setup no distortion as initial guess
+        break;
+        case PINHOLE_CAMERA_RADIAL3_Rational_1:
+          //intrinsic = std::make_shared<Pinhole_Intrinsic_Radial_K3_Rational_1>
+          //  (width, height, focal, ppx, ppy, 0.0, 0.0, 0.0); // setup no distortion as initial guess
+          std::cerr << "Error: camera model not yet implemented: " << (int) e_User_camera_model << std::endl;
+          return EXIT_FAILURE;
+        break;
+        case PINHOLE_CAMERA_RADIAL3_Rational_2:
+          intrinsic = std::make_shared<Pinhole_Intrinsic_Radial_K3_Rational_2>
+            (width, height, focal, ppx, ppy, 0.0, 0.0, 0.0); // setup no distortion as initial guess
+        break;
+        case PINHOLE_CAMERA_RADIAL3_Rational_3:
+          //intrinsic = std::make_shared<Pinhole_Intrinsic_Radial_K3_Rational_3>
+          //  (width, height, focal, ppx, ppy, 0.0, 0.0, 0.0); // setup no distortion as initial guess
+          std::cerr << "Error: camera model not yet implemented: " << (int) e_User_camera_model << std::endl;
+          return EXIT_FAILURE;
         break;
         case CAMERA_SPHERICAL:
            intrinsic = std::make_shared<Intrinsic_Spherical>
