@@ -41,7 +41,7 @@ class Pinhole_Intrinsic_Radial_K3_Rational_2 : public Pinhole_Intrinsic_Radial_K
 
     /**
     * @brief Tell from which type the embed camera is
-    * @retval PINHOLE_CAMERA_RADIAL3
+    * @retval PINHOLE_CAMERA_RADIAL3_Rational_2
     */
     EINTRINSIC getType() const override
     {
