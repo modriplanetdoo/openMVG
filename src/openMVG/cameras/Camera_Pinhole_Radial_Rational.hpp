@@ -74,12 +74,12 @@ class Pinhole_Intrinsic_Radial_K3_Rational_2 : public Pinhole_Intrinsic_Radial_K
      */
     double add_disto( const double x, const double c ) const
     {
-      if ( !std::isfinite( c ) )
-      {
-        return 0.;
-      }
-
       const double & k1 = params_[0], & k2 = params_[1], & k3 = params_[2];
+
+      if ( !std::isfinite( c ) || x == 0.0 || ( k1 == 0.0 && k2 == 0.0 && k3 == 0.0 ) )
+      {
+        return x;
+      }
 
       const double p = k1 * ::sqrt( 1. + Square( c ) );
       const double q = k2 * ::sqrt( 1. + Square( c ) );
@@ -126,7 +126,7 @@ class Pinhole_Intrinsic_Radial_K3_Rational_2 : public Pinhole_Intrinsic_Radial_K
       double x = xd;
       double diff = std::numeric_limits<double>::max();
 
-      // choose x1 or x2, whichever is closest to `xd
+      // choose x1 or x2, whichever is closest to `xd`
       for ( const double x_ : { x1, x2 } )
       {
         if ( !std::isfinite( x_ ) )
