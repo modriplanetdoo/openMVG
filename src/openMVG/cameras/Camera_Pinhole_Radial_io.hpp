@@ -54,6 +54,18 @@ inline void openMVG::cameras::Pinhole_Intrinsic_Radial_K3_Rational_2::load( Arch
     Pinhole_Intrinsic_Radial_K3::load(ar);
 }
 
+template <class Archive>
+inline void openMVG::cameras::Pinhole_Intrinsic_Radial_K3_Rational_3::save( Archive & ar ) const
+{
+    Pinhole_Intrinsic_Radial_K3::save(ar);
+}
+
+template <class Archive>
+inline void openMVG::cameras::Pinhole_Intrinsic_Radial_K3_Rational_3::load( Archive & ar )
+{
+    Pinhole_Intrinsic_Radial_K3::load(ar);
+}
+
 
 CEREAL_REGISTER_TYPE_WITH_NAME(openMVG::cameras::Pinhole_Intrinsic_Radial_K1, "pinhole_radial_k1");
 CEREAL_REGISTER_POLYMORPHIC_RELATION(openMVG::cameras::IntrinsicBase, openMVG::cameras::Pinhole_Intrinsic_Radial_K1);

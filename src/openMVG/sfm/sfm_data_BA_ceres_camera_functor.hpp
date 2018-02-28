@@ -565,6 +565,47 @@ struct ResidualErrorFunctor_Pinhole_Intrinsic_Radial_K3_Rational_2 : public Resi
 };
 
 /**
+ * @brief Ceres abstract functor to use a ResidualErrorFunctor_Pinhole_Intrinsic_Radial_K3_Rational_3
+ *
+ *  Data parameter blocks are the following <2,6,6,3>
+ *  - 2 => dimension of the residuals,
+ *  - 6 => the intrinsic data block [focal, principal point x, principal point y, K1, K2, K3],
+ *  - 6 => the camera extrinsic data block (camera orientation and position) [R;t],
+ *         - rotation(angle axis), and translation [rX,rY,rZ,tx,ty,tz].
+ *  - 3 => a 3D point data block.
+ *
+ */
+struct ResidualErrorFunctor_Pinhole_Intrinsic_Radial_K3_Rational_3 : public ResidualErrorFunctor_Pinhole_Intrinsic_Radial_K3_Rational<ResidualErrorFunctor_Pinhole_Intrinsic_Radial_K3_Rational_2>
+{
+  explicit ResidualErrorFunctor_Pinhole_Intrinsic_Radial_K3_Rational_3(const double* const pos_2dpoint)
+    : ResidualErrorFunctor_Pinhole_Intrinsic_Radial_K3_Rational(pos_2dpoint)
+  {
+  }
+
+  template <typename T>
+  static T getRadialCoefficient(const T &r1, const T* const cam_intrinsics)
+  {
+    const T& k1 = cam_intrinsics[OFFSET_DISTO_K1];
+    const T& k2 = cam_intrinsics[OFFSET_DISTO_K2];
+    const T& k3 = cam_intrinsics[OFFSET_DISTO_K3];
+
+    const T r2 = r1 * r1;
+
+    return ( (1.0 + k1 * r2) / ( 1.0 + k2 * r1 + k3 * r2) );
+  }
+
+  static ceres::CostFunction* Create
+  (
+    const Vec2 & observation,
+    const double weight = 0.0
+  )
+  {
+    return ResidualErrorFunctor_Pinhole_Intrinsic_Radial_K3_Rational::Create
+      <ResidualErrorFunctor_Pinhole_Intrinsic_Radial_K3_Rational_3>(observation, weight);
+  }
+};
+
+/**
  * @brief Ceres functor with constrained 3D points to use a Pinhole_Intrinsic_Brown_T2
  *
  *  Data parameter blocks are the following <2,8,6,3>

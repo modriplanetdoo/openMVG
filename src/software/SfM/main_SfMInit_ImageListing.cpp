@@ -406,9 +406,8 @@ int main(int argc, char **argv)
             (width, height, focal, ppx, ppy, 0.0, 0.0, 0.0); // setup no distortion as initial guess
         break;
         case PINHOLE_CAMERA_RADIAL3_Rational_3:
-          //intrinsic = std::make_shared<Pinhole_Intrinsic_Radial_K3_Rational_3>
-          //  (width, height, focal, ppx, ppy, 0.0, 0.0, 0.0); // setup no distortion as initial guess
-          std::cerr << "Error: camera model not yet implemented: " << (int) e_User_camera_model << std::endl;
+          intrinsic = std::make_shared<Pinhole_Intrinsic_Radial_K3_Rational_3>
+            (width, height, focal, ppx, ppy, 0.0, 0.0, 0.0); // setup no distortion as initial guess
           return EXIT_FAILURE;
         break;
         case CAMERA_SPHERICAL:

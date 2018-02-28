@@ -42,6 +42,15 @@ TEST(Cameras_Radial, disto_undisto_K3_Rational_2) {
   Test_camera(cam);
 }
 
+TEST(Cameras_Radial, disto_undisto_K3_Rational_3) {
+
+  const Pinhole_Intrinsic_Radial_K3_Rational_3 cam(1000, 1000, 1000, 500, 500,
+    // K1, K2, K3
+    -1.26207, -1.25222, -0.0153429);
+
+  Test_camera(cam);
+}
+
 /* ************************************************************************* */
 int main() { TestResult tr; return TestRegistry::runAllTests(tr);}
 /* ************************************************************************* */
