@@ -408,7 +408,7 @@ int main(int argc, char **argv)
         case PINHOLE_CAMERA_RADIAL3_Rational_3:
           intrinsic = std::make_shared<Pinhole_Intrinsic_Radial_K3_Rational_3>
             (width, height, focal, ppx, ppy, 0.0, 0.0, 0.0); // setup no distortion as initial guess
-          return EXIT_FAILURE;
+          break;
         break;
         case CAMERA_SPHERICAL:
            intrinsic = std::make_shared<Intrinsic_Spherical>

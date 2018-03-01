@@ -73,5 +73,7 @@ CEREAL_REGISTER_TYPE_WITH_NAME(openMVG::cameras::Pinhole_Intrinsic_Radial_K3, "p
 CEREAL_REGISTER_POLYMORPHIC_RELATION(openMVG::cameras::IntrinsicBase, openMVG::cameras::Pinhole_Intrinsic_Radial_K3);
 CEREAL_REGISTER_TYPE_WITH_NAME(openMVG::cameras::Pinhole_Intrinsic_Radial_K3_Rational_2, "pinhole_radial_k3_rational_2");
 CEREAL_REGISTER_POLYMORPHIC_RELATION(openMVG::cameras::Pinhole_Intrinsic_Radial_K3, openMVG::cameras::Pinhole_Intrinsic_Radial_K3_Rational_2);
+CEREAL_REGISTER_TYPE_WITH_NAME(openMVG::cameras::Pinhole_Intrinsic_Radial_K3_Rational_3, "pinhole_radial_k3_rational_3");
+CEREAL_REGISTER_POLYMORPHIC_RELATION(openMVG::cameras::Pinhole_Intrinsic_Radial_K3, openMVG::cameras::Pinhole_Intrinsic_Radial_K3_Rational_3);
 
 #endif // #ifndef OPENMVG_CAMERAS_CAMERA_PINHOLE_RADIAL_IO_HPP

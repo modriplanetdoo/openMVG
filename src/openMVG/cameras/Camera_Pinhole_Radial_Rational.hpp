@@ -48,7 +48,6 @@ class Pinhole_Intrinsic_Radial_K3_Rational_2 : public Pinhole_Intrinsic_Radial_K
       return PINHOLE_CAMERA_RADIAL3_Rational_2;
     }
 
-
     /**
     * @brief Add the distortion field to a point (that is in normalized camera frame)
     * @param p Point before distortion computation (in normalized camera frame)
@@ -59,12 +58,11 @@ class Pinhole_Intrinsic_Radial_K3_Rational_2 : public Pinhole_Intrinsic_Radial_K
       const double & k1 = params_[0], & k2 = params_[1], & k3 = params_[2];
 
       const double r2 = Square( p( 0 ) ) + Square( p( 1 ) );
-      const double r1 = std::sqrt(r2);
-      const double r_coeff = ( 1. + k1 * r1) / ( 1. + k2 * r1 + k3 * r2 );
+      const double r1 = std::sqrt( r2 );
+      const double r_coeff = ( 1. + k1 * r1 ) / ( 1. + k2 * r1 + k3 * r2 );
 
       return ( p * r_coeff );
     }
-
 
     /**
      * @brief Add distortion for one coordinate
@@ -183,7 +181,6 @@ class Pinhole_Intrinsic_Radial_K3_Rational_2 : public Pinhole_Intrinsic_Radial_K
 };
 
 
-
 /**
 * @brief Implement a Pinhole camera with a 3 rational radial distortion coefficients.
 * \f$ x_d = x_u (1 + K_1 r^2) / (1 + K_2 r + K_3 r^2) \f$
@@ -224,21 +221,20 @@ class Pinhole_Intrinsic_Radial_K3_Rational_3 : public Pinhole_Intrinsic_Radial_K
       return PINHOLE_CAMERA_RADIAL3_Rational_3;
     }
 
-
     /**
     * @brief Add the distortion field to a point (that is in normalized camera frame)
     * @param p Point before distortion computation (in normalized camera frame)
     * @return point with distortion
     */
-    Vec2 add_disto( const Vec2 & p ) const override
+    Vec2 add_disto( const Vec2 & pt ) const override
     {
       const double & k1 = params_[0], & k2 = params_[1], & k3 = params_[2];
 
-      const double r2 = Square( p( 0 ) ) + Square( p( 1 ) );
-      const double r1 = std::sqrt(r2);
-      const double r_coeff = ( 1. + k1 * r2) / ( 1. + k2 * r1 + k3 * r2 );
+      const double r2 = Square( pt( 0 ) ) + Square( pt( 1 ) );
+      const double r1 = std::sqrt( r2 );
+      const double r_coeff = ( 1. + k1 * r2 ) / ( 1. + k2 * r1 + k3 * r2 );
 
-      return ( p * r_coeff );
+      return ( pt * r_coeff );
     }
 
 

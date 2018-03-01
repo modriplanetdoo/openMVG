@@ -481,7 +481,7 @@ public:
 
     // Apply distortion (xd,yd) = disto(x_u,y_u)
     const T r1 = projected_point.norm();
-    const T r_coeff = Impl::getRadialCoefficient(projected_point.norm(), cam_intrinsics);
+    const T r_coeff = Impl::getRadialCoefficient(r1, cam_intrinsics);
 
     Eigen::Map<Eigen::Matrix<T, 2, 1>> residuals(out_residuals);
     residuals << principal_point_x + (projected_point.x() * r_coeff) * focal - m_pos_2dpoint[0],
@@ -550,7 +550,7 @@ struct ResidualErrorFunctor_Pinhole_Intrinsic_Radial_K3_Rational_2 : public Resi
 
     const T r2 = r1 * r1;
 
-    return ( (1.0 + k1 * r1) / ( 1.0 + k2 * r1 + k3 * r2) );
+    return ( (1.0 + k1 * r1 ) / ( 1.0 + k2 * r1 + k3 * r2 ) );
   }
 
   static ceres::CostFunction* Create
@@ -575,7 +575,7 @@ struct ResidualErrorFunctor_Pinhole_Intrinsic_Radial_K3_Rational_2 : public Resi
  *  - 3 => a 3D point data block.
  *
  */
-struct ResidualErrorFunctor_Pinhole_Intrinsic_Radial_K3_Rational_3 : public ResidualErrorFunctor_Pinhole_Intrinsic_Radial_K3_Rational<ResidualErrorFunctor_Pinhole_Intrinsic_Radial_K3_Rational_2>
+struct ResidualErrorFunctor_Pinhole_Intrinsic_Radial_K3_Rational_3 : public ResidualErrorFunctor_Pinhole_Intrinsic_Radial_K3_Rational<ResidualErrorFunctor_Pinhole_Intrinsic_Radial_K3_Rational_3>
 {
   explicit ResidualErrorFunctor_Pinhole_Intrinsic_Radial_K3_Rational_3(const double* const pos_2dpoint)
     : ResidualErrorFunctor_Pinhole_Intrinsic_Radial_K3_Rational(pos_2dpoint)
@@ -591,7 +591,7 @@ struct ResidualErrorFunctor_Pinhole_Intrinsic_Radial_K3_Rational_3 : public Resi
 
     const T r2 = r1 * r1;
 
-    return ( (1.0 + k1 * r2) / ( 1.0 + k2 * r1 + k3 * r2) );
+    return ( (1.0 + k1 * r2 ) / ( 1.0 + k2 * r1 + k3 * r2 ) );
   }
 
   static ceres::CostFunction* Create
