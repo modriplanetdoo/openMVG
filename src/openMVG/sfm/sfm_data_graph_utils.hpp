@@ -60,6 +60,13 @@ bool SplitMatchesIntoSubgraphMatches
   std::vector<matching::PairWiseMatches> & subgraphs_matches
 );
 
+bool PairsToMST
+(
+  const Pair_Set & pairs,
+  const matching::PairWiseMatches & pair_matches,
+  std::map<IndexT, Pair_Set> & msts
+);
+
 } // namespace sfm
 } // namespace openMVG
 

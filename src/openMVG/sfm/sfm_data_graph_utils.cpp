@@ -13,6 +13,12 @@
 #include "openMVG/graph/graph_builder.hpp"
 #include "openMVG/types.hpp"
 
+#include "lemon/adaptors.h"
+#include "lemon/dfs.h"
+#include "lemon/kruskal.h"
+#include "lemon/list_graph.h"
+#include "lemon/path.h"
+
 
 namespace openMVG {
 namespace sfm {
@@ -117,6 +123,60 @@ bool SplitMatchesIntoSubgraphMatches
     }
   }
   return !subgraphs_matches.empty();
+}
+
+bool PairsToMST
+(
+  const Pair_Set & pairs,
+  const matching::PairWiseMatches & pair_matches,
+  std::map<IndexT, Pair_Set> & msts
+)
+{
+  std::map<IndexT, std::set<IndexT>> connected_components;
+  PairsToConnectedComponents(pairs, false, 2, connected_components);
+
+  for (const auto &connected_component : connected_components)
+  {
+    lemon::ListGraph graph;
+    lemon::ListGraph::EdgeMap<int> edge_map(graph); // weights
+    std::map<IndexT, lemon::ListGraph::Node> map_index_to_node; // map view id to node id
+    std::map<lemon::ListGraph::Node, IndexT> map_node_to_index; // map node id to view id
+
+    for (const IndexT idx : connected_component.second)
+    {
+      lemon::ListGraph::Node node = graph.addNode();
+      map_index_to_node[ idx ] = node;
+      map_node_to_index[ node ] = idx;
+    }
+
+    for (const auto &pair_matches_it : pair_matches)
+    {
+      const Pair & pair = pair_matches_it.first;
+      const matching::IndMatches & matches = pair_matches_it.second;
+
+      // skip if either is not part of this connected component
+      if ( connected_component.second.count( pair.first ) == 0 || connected_component.second.count( pair.second ) == 0 )
+        continue;
+
+      // add edge to the graph
+      lemon::ListGraph::Edge edge = graph.addEdge(map_index_to_node[ pair.first ], map_index_to_node[ pair.second ]);
+      edge_map[ edge ] = - matches.size();
+    }
+
+    // compute the MST of the graph
+    std::vector<lemon::ListGraph::Edge> tree_edge_vec;
+    lemon::kruskal(graph, edge_map, std::back_inserter(tree_edge_vec));
+
+    Pair_Set mst;
+    for (const lemon::ListGraph::Edge & edge : tree_edge_vec )
+    {
+      mst.insert(Pair(map_node_to_index[graph.u(edge)], map_node_to_index[graph.v(edge)]));
+    }
+
+    msts[ connected_component.first ] = mst;
+  }
+
+  return true;
 }
 
 } // namespace sfm

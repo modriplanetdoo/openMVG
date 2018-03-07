@@ -13,6 +13,8 @@
 
 #include "testing/testing.h"
 
+#include <random>
+
 using namespace openMVG;
 using namespace openMVG::matching;
 using namespace openMVG::sfm;
@@ -81,6 +83,43 @@ TEST(SFM_DATA_GRAPH, PairsToConnectedComponents)
       EXPECT_TRUE(pairs1.find(2) != pairs1.end());
       EXPECT_TRUE(pairs1.find(3) != pairs1.end());
     }
+  }
+}
+
+TEST(SFM_DATA_GRAPH, PairsToMST)
+{
+  std::mt19937 gen;
+  std::uniform_int_distribution<> rnd(0, 190);
+  std::uniform_int_distribution<> rnd_mst(100, 200);
+
+  PairWiseMatches pair_matches;
+  // Generate 3x3 grid matches
+  for (int i = 0; i < 3; i++)
+  {
+    for (int j = i; j < 3; j++)
+    {
+      pair_matches[{ i, j }] = IndMatches( rnd(gen) );
+    }
+  }
+  Pair_Set pairs = matching::getPairs(pair_matches);
+
+  // Override edges that we want to be part of MST with custom "weight"
+  std::vector<Pair> mst_pairs = { { 0, 3 }, { 0, 4}, {1, 4}, { 2, 4 }, { 2, 5 }, { 3, 6 }, { 4, 7 }, { 5, 8 } };
+  for (const Pair & pair : mst_pairs)
+  {
+    pair_matches[pair] = IndMatches( rnd_mst(gen) );
+  }
+
+  std::map<IndexT, Pair_Set> msts;
+  PairsToMST(pairs, pair_matches, msts);
+
+  EXPECT_EQ(msts.size(), 1);
+
+  const Pair_Set & mst = msts[0];
+  EXPECT_EQ(mst.size(), mst_pairs.size());
+  for (const Pair & pair : mst_pairs)
+  {
+    EXPECT_TRUE(mst.find(pair) != mst.end());
   }
 }
 
