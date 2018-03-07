@@ -14,11 +14,34 @@
 #include <vector>
 
 #include "openMVG/sfm/sfm_data.hpp"
+#include "openMVG/cameras/cameras.hpp"
 
 #include "third_party/histogram/histogram.hpp"
 #include "third_party/htmlDoc/htmlDoc.hpp"
 #include "third_party/stlplus3/filesystemSimplified/file_system.hpp"
 #include "third_party/vectorGraphics/svgDrawer.hpp"
+
+template <class T>
+std::ostringstream & intrinsicsToString(std::ostringstream & os, const T * intrinsic)
+{
+    os << "NOT IMPLEMENTED";
+    return os;
+}
+
+template <>
+std::ostringstream & intrinsicsToString(std::ostringstream & os, const openMVG::cameras::Pinhole_Intrinsic * intrinsic)
+{
+    os << " f:" << intrinsic->focal() << " ppx:" << intrinsic->principal_point()(0) << " ppy:" << intrinsic->principal_point()(1);
+    return os;
+}
+
+template <>
+std::ostringstream & intrinsicsToString(std::ostringstream & os, const openMVG::cameras::Pinhole_Intrinsic_Radial_K3 * intrinsic)
+{
+    intrinsicsToString(os, static_cast<const openMVG::cameras::Pinhole_Intrinsic *>(intrinsic))
+            << " k1:" << intrinsic->getParams()[3] << " k2:" << intrinsic->getParams()[4] << " k3:" << intrinsic->getParams()[5];
+    return os;
+}
 
 namespace openMVG {
 namespace sfm {
@@ -77,6 +100,32 @@ bool Generate_SfM_Report
   htmlDocStream.pushInfo( os.str() );
   htmlDocStream.pushInfo( sFullLine );
 
+  os.str("");
+  os << "Intrinsics:" << sNewLine;
+  for (const auto &intrinsics_it : sfm_data.intrinsics)
+  {
+      const IndexT id_intrinsic = intrinsics_it.first;
+      const std::shared_ptr<cameras::IntrinsicBase> & intrinsic = intrinsics_it.second;
+
+      os << "Id: " << id_intrinsic;
+
+      switch (intrinsic->getType())
+      {
+      case cameras::PINHOLE_CAMERA:
+        ::intrinsicsToString(os, static_cast<cameras::Pinhole_Intrinsic *>(intrinsic.get()));
+        break;
+      case cameras::PINHOLE_CAMERA_RADIAL3:
+        ::intrinsicsToString(os, static_cast<cameras::Pinhole_Intrinsic_Radial_K3*>(intrinsic.get()));
+        break;
+      default:
+        ::intrinsicsToString(os, intrinsic.get());
+      }
+      os << sNewLine;
+  }
+
+  htmlDocStream.pushInfo( os.str() );
+  htmlDocStream.pushInfo( sFullLine );
+
   // Track length statistics
   if (!track_length_occurences.empty() && !sfm_data.GetLandmarks().empty())
   {
@@ -116,6 +165,7 @@ bool Generate_SfM_Report
   os << sRowBegin
     << sColBegin + "IdView" + sColEnd
     << sColBegin + "Basename" + sColEnd
+    << sColBegin + "IdIntrinsic" + sColEnd
     << sColBegin + "#Observations" + sColEnd
     << sColBegin + "Residuals min" + sColEnd
     << sColBegin + "Residuals median" + sColEnd
@@ -128,13 +178,15 @@ bool Generate_SfM_Report
   {
     const View * v = iterV.second.get();
     const IndexT id_view = v->id_view;
+    const IndexT id_intrinsic = v->id_intrinsic;
 
     os.str("");
     os << sRowBegin
       << sColBegin << id_view << sColEnd
-      << sColBegin + stlplus::basename_part(v->s_Img_path) + sColEnd;
+      << sColBegin + stlplus::basename_part(v->s_Img_path) + sColEnd
+      << sColBegin << id_intrinsic << sColEnd;
 
-    // IdView | basename | #Observations | residuals min | residual median | residual max
+    // IdView | basename | IdIntrinsic | #Observations | residuals min | residual median | residual max
     if (sfm_data.IsPoseAndIntrinsicDefined(v))
     {
       if (residuals_per_view.find(id_view) != residuals_per_view.end())
