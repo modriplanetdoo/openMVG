@@ -20,7 +20,7 @@
 
 #include "third_party/stlplus3/filesystemSimplified/file_system.hpp"
 
-void openMVG::sfm::Intrinsic_Precalibration::run(
+bool openMVG::sfm::Intrinsic_Precalibration::run(
     SfM_Data & sfm_data,
     const Pair_Set & pairs,
     const std::shared_ptr<Features_Provider> & features_provider,
@@ -48,6 +48,10 @@ void openMVG::sfm::Intrinsic_Precalibration::run(
     Relative_Pose_Engine::Relative_Pair_Poses relative_poses = relative_pose_engine.Get_Relative_Poses();
 
 
+    //
+    // Create a SfM where we combine all the relative poses in order to refine the shared intrinsic on multiple relative pose at once.
+    //
+
     SfM_Data tiny_scene;
     // copy intrinsics without any modifications
     for (const auto & intrinsics_it : sfm_data.intrinsics)
@@ -56,52 +60,44 @@ void openMVG::sfm::Intrinsic_Precalibration::run(
     }
 
     // copy generated views with generated structure and poses
-    IndexT id_pose = 0, id_view = 0, id_landmark = 0;
     for (const auto & relative_poses_it : relative_poses)
     {
         const Pair & pair = relative_poses_it.first;
         
-        std::shared_ptr<View> view_I_original = sfm_data.views.at(pair.first);
-        std::shared_ptr<View> view_J_original = sfm_data.views.at(pair.second);
+        const std::shared_ptr<View>
+          view_I_original = sfm_data.views.at(pair.first),
+          view_J_original = sfm_data.views.at(pair.second);
 
         const std::shared_ptr<cameras::IntrinsicBase>
           cam_I = sfm_data.intrinsics.at(view_I_original->id_intrinsic),
           cam_J = sfm_data.intrinsics.at(view_J_original->id_intrinsic);
 
+        const IndexT starting_id = tiny_scene.poses.size();
+
         const Pose3 pose_I; // identity
         const Pose3 & pose_J = relative_poses_it.second;
 
         // add poses
-        const IndexT id_pose_I = id_pose++;
-        const IndexT id_pose_J = id_pose++;
+        const IndexT id_pose_I = starting_id + 0;
+        const IndexT id_pose_J = starting_id + 1;
         tiny_scene.poses[id_pose_I] = pose_I;
         tiny_scene.poses[id_pose_J] = pose_J;
         
         // add views
-        const IndexT id_view_I = id_view++;
-        const IndexT id_view_J = id_view++;
-        std::shared_ptr<View> view_I = std::make_shared<View>(
-            view_I_original->s_Img_path,
-            id_view_I,
-            view_I_original->id_intrinsic,
-            id_pose_I,
-            view_I_original->ui_width,
-            view_I_original->ui_height);
-        std::shared_ptr<View> view_J = std::make_shared<View>(
-            view_J_original->s_Img_path,
-            id_view_J,
-            view_J_original->id_intrinsic,
-            id_pose_J,
-            view_J_original->ui_width,
-            view_J_original->ui_height);
-        tiny_scene.views[id_view_I] = view_I;
-        tiny_scene.views[id_view_J] = view_J;
+        const IndexT id_view_I = starting_id + 0;
+        const IndexT id_view_J = starting_id + 1;
 
+        std::shared_ptr<View> view_I = std::make_shared<View>(*view_I_original);
+        view_I->id_view = id_view_I;
+        view_I->id_pose = id_pose_I;
+        tiny_scene.views[id_view_I] = view_I;
+
+        std::shared_ptr<View> view_J = std::make_shared<View>(*view_J_original);
+        view_J->id_view = id_view_J;
+        view_J->id_pose = id_pose_J;
+        tiny_scene.views[id_view_J] = view_J;
  
         // init structure
-        const Mat34
-          P1 = cam_I->get_projective_equivalent(pose_I),
-          P2 = cam_J->get_projective_equivalent(pose_J);
         Landmarks & landmarks = tiny_scene.structure;
 
         const matching::IndMatches & matches = matches_provider->pairWise_matches_.at(pair);
@@ -112,39 +108,39 @@ void openMVG::sfm::Intrinsic_Precalibration::run(
                 x2_ = features_provider->feats_per_view.at(view_J_original->id_view)[match.j_].coords().cast<double>();
             Vec3 X;
             TriangulateDLT(
-                P1, cam_I->get_ud_pixel(x1_).homogeneous(),
-                P2, cam_J->get_ud_pixel(x2_).homogeneous(),
+                pose_I.asMatrix(), (*cam_I)(cam_I->get_ud_pixel(x1_)),
+                pose_J.asMatrix(), (*cam_J)(cam_J->get_ud_pixel(x2_)),
                 &X);
             Observations obs;
             obs[view_I->id_view] = Observation(x1_, match.i_);
             obs[view_J->id_view] = Observation(x2_, match.j_);
-            landmarks[id_landmark].obs = obs;
-            landmarks[id_landmark].X = X;
 
-            id_landmark++;
+            const IndexT id_landmark = landmarks.size();
+            landmarks[id_landmark] = { X, obs };
         }
     }
 
     Bundle_Adjustment_Ceres bundle_adjustment_obj;
-    // - refine only Structure and translations
-    bundle_adjustment_obj.Adjust
+    bool b_BA_Status = bundle_adjustment_obj.Adjust
       (
         tiny_scene,
         Optimize_Options(
           cameras::Intrinsic_Parameter_Type::ADJUST_FOCAL_LENGTH | cameras::Intrinsic_Parameter_Type::ADJUST_PRINCIPAL_POINT,
-          sfm::Extrinsic_Parameter_Type::ADJUST_TRANSLATION, // Rotations are held as constant
+          sfm::Extrinsic_Parameter_Type::ADJUST_ALL,
           sfm::Structure_Parameter_Type::ADJUST_ALL,
           Control_Point_Parameter(),
           false)
       );
-    bundle_adjustment_obj.Adjust
+    b_BA_Status = b_BA_Status && bundle_adjustment_obj.Adjust
       (
         tiny_scene,
         Optimize_Options(
           cameras::Intrinsic_Parameter_Type::ADJUST_ALL,
-          sfm::Extrinsic_Parameter_Type::ADJUST_TRANSLATION, // Rotations are held as constant
+          sfm::Extrinsic_Parameter_Type::ADJUST_ALL,
           sfm::Structure_Parameter_Type::ADJUST_ALL,
           Control_Point_Parameter(),
           false)
       );
+
+    return b_BA_Status;
 }

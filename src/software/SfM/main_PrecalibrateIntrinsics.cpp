@@ -1,6 +1,6 @@
 // This file is part of OpenMVG, an Open Multiple View Geometry C++ library.
 
-// Copyright (c) 2012, 2013, 2014 Pierre MOULON.
+// Copyright (c) 2018 Pierre MOULON, Mitja Puzigaća.
 
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -148,16 +148,14 @@ int main(int argc, char **argv)
   openMVG::system::Timer timer;
 
   Intrinsic_Precalibration precalibration;
-  precalibration.run(sfm_data, matches_provider->getPairs(), feats_provider, matches_provider);
-
-  if (true)
+  if (precalibration.run(sfm_data, matches_provider->getPairs(), feats_provider, matches_provider))
   {
     std::cout << std::endl << " Total precalibration took (s): " << timer.elapsed() << std::endl;
 
     //-- Export to disk computed scene (data & visualizable results)
     std::cout << "...Export SfM_Data to disk." << std::endl;
     Save(sfm_data,
-      stlplus::create_filespec(sOutDir, "sfm_data", ".json"),
+      stlplus::create_filespec(sOutDir, "sfm_data", ".bin"),
       ESfM_Data(ALL));
 
     return EXIT_SUCCESS;

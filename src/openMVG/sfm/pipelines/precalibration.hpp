@@ -25,7 +25,7 @@ class Intrinsic_Precalibration
 public:
   explicit Intrinsic_Precalibration() = default;
 
-  void run(
+  bool run(
       SfM_Data & sfm_data,
       const Pair_Set & pairs,
       const std::shared_ptr<Features_Provider> & features_provider,

@@ -133,7 +133,9 @@ bool PairsToMST
 )
 {
   std::map<IndexT, std::set<IndexT>> connected_components;
-  PairsToConnectedComponents(pairs, false, 2, connected_components);
+  const bool keep_only_biedge_cc = false;
+  const int min_nodes = 2;
+  PairsToConnectedComponents(pairs, keep_only_biedge_cc, min_nodes, connected_components);
 
   for (const auto &connected_component : connected_components)
   {
@@ -160,7 +162,7 @@ bool PairsToMST
 
       // add edge to the graph
       lemon::ListGraph::Edge edge = graph.addEdge(map_index_to_node[ pair.first ], map_index_to_node[ pair.second ]);
-      edge_map[ edge ] = - matches.size();
+      edge_map[ edge ] = - static_cast<int>(matches.size());
     }
 
     // compute the MST of the graph
@@ -168,7 +170,7 @@ bool PairsToMST
     lemon::kruskal(graph, edge_map, std::back_inserter(tree_edge_vec));
 
     Pair_Set mst;
-    for (const lemon::ListGraph::Edge & edge : tree_edge_vec )
+    for ( const lemon::ListGraph::Edge & edge : tree_edge_vec )
     {
       mst.insert(Pair(map_node_to_index[graph.u(edge)], map_node_to_index[graph.v(edge)]));
     }
@@ -176,7 +178,7 @@ bool PairsToMST
     msts[ connected_component.first ] = mst;
   }
 
-  return true;
+  return !msts.empty();
 }
 
 } // namespace sfm

@@ -60,6 +60,12 @@ bool SplitMatchesIntoSubgraphMatches
   std::vector<matching::PairWiseMatches> & subgraphs_matches
 );
 
+///  @brief Find MST from pairswise matches
+///  @param[in]   pairs  The pair sets of the images.
+///  @param[in]   pair_matches  Pairwise matches.
+///  @param[out]  msts  Pairs set that are part of MST. One pair set is returned for each connected component.
+///
+///  @return True if any MST was found.
 bool PairsToMST
 (
   const Pair_Set & pairs,
