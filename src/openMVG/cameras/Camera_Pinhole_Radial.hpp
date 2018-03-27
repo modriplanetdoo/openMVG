@@ -1,3 +1,4 @@
+// This file is part of OpenMVG, an Open Multiple View Geometry C++ library.
 
 // Copyright (c) 2015 Pierre MOULON.
 
@@ -8,11 +9,10 @@
 #ifndef OPENMVG_CAMERAS_CAMERA_PINHOLE_RADIAL_HPP
 #define OPENMVG_CAMERAS_CAMERA_PINHOLE_RADIAL_HPP
 
+#include <vector>
+
 #include "openMVG/cameras/Camera_Common.hpp"
 #include "openMVG/cameras/Camera_Pinhole.hpp"
-#include "openMVG/numeric/numeric.h"
-
-#include <vector>
 
 namespace openMVG
 {
@@ -39,7 +39,7 @@ double bisection_Radius_Solve(
   const std::vector<double> & params, // radial distortion parameters
   double r2, // targeted radius
   Disto_Functor & functor,
-  double epsilon = 1e-8 // criteria to stop the bisection
+  double epsilon = 1e-10 // criteria to stop the bisection
 )
 {
   // Guess plausible upper and lower bound
@@ -98,9 +98,10 @@ class Pinhole_Intrinsic_Radial_K1 : public Pinhole_Intrinsic
       int w = 0, int h = 0,
       double focal = 0.0, double ppx = 0, double ppy = 0,
       double k1 = 0.0 )
-      : Pinhole_Intrinsic( w, h, focal, ppx, ppy )
+      : Pinhole_Intrinsic( w, h, focal, ppx, ppy ),
+        params_({k1})
     {
-      params_ = {k1};
+
     }
 
     ~Pinhole_Intrinsic_Radial_K1() override = default;
@@ -131,7 +132,6 @@ class Pinhole_Intrinsic_Radial_K1 : public Pinhole_Intrinsic
     */
     Vec2 add_disto( const Vec2 & p ) const override
     {
-
       const double k1 = params_[0];
 
       const double r2 = p( 0 ) * p( 0 ) + p( 1 ) * p( 1 );
@@ -203,18 +203,17 @@ class Pinhole_Intrinsic_Radial_K1 : public Pinhole_Intrinsic
       if ( !(param & (int)Intrinsic_Parameter_Type::ADJUST_FOCAL_LENGTH)
           || param & (int)Intrinsic_Parameter_Type::NONE )
       {
-        constant_index.push_back(0);
+        constant_index.insert(constant_index.end(), 0);
       }
       if ( !(param & (int)Intrinsic_Parameter_Type::ADJUST_PRINCIPAL_POINT)
           || param & (int)Intrinsic_Parameter_Type::NONE )
       {
-        constant_index.push_back(1);
-        constant_index.push_back(2);
+        constant_index.insert(constant_index.end(), {1, 2});
       }
       if ( !(param & (int)Intrinsic_Parameter_Type::ADJUST_DISTORTION)
           || param & (int)Intrinsic_Parameter_Type::NONE )
       {
-        constant_index.push_back(3);
+        constant_index.insert(constant_index.end(), 3);
       }
       return constant_index;
     }
@@ -244,22 +243,14 @@ class Pinhole_Intrinsic_Radial_K1 : public Pinhole_Intrinsic
     * @param ar Archive
     */
     template <class Archive>
-    void save( Archive & ar ) const
-    {
-      Pinhole_Intrinsic::save( ar );
-      ar( cereal::make_nvp( "disto_k1", params_ ) );
-    }
+    inline void save( Archive & ar ) const;
 
     /**
     * @brief  Serialization in
     * @param ar Archive
     */
     template <class Archive>
-    void load( Archive & ar )
-    {
-      Pinhole_Intrinsic::load(ar);
-      ar( cereal::make_nvp( "disto_k1", params_ ) );
-    }
+    inline void load( Archive & ar );
 
     /**
     * @brief Clone the object
@@ -279,9 +270,9 @@ class Pinhole_Intrinsic_Radial_K1 : public Pinhole_Intrinsic
     * @param r2 square distance (relative to center)
     * @return distance
     */
-    static double distoFunctor( const std::vector<double> & params, double r2 )
+    static inline double distoFunctor( const std::vector<double> & params, double r2 )
     {
-      const double k1 = params[0];
+      const double & k1 = params[0];
       return r2 * Square( 1. + r2 * k1 );
     }
 };
@@ -316,9 +307,9 @@ class Pinhole_Intrinsic_Radial_K3 : public Pinhole_Intrinsic
       int w = 0, int h = 0,
       double focal = 0.0, double ppx = 0, double ppy = 0,
       double k1 = 0.0, double k2 = 0.0, double k3 = 0.0 )
-      : Pinhole_Intrinsic( w, h, focal, ppx, ppy )
+      : Pinhole_Intrinsic( w, h, focal, ppx, ppy ),
+        params_({k1, k2, k3})
     {
-      params_ = {k1, k2, k3};
     }
 
     ~Pinhole_Intrinsic_Radial_K3() override = default;
@@ -348,8 +339,7 @@ class Pinhole_Intrinsic_Radial_K3 : public Pinhole_Intrinsic
     */
     Vec2 add_disto( const Vec2 & p ) const override
     {
-
-      const double k1 = params_[0], k2 = params_[1], k3 = params_[2];
+      const double & k1 = params_[0], & k2 = params_[1], & k3 = params_[2];
 
       const double r2 = p( 0 ) * p( 0 ) + p( 1 ) * p( 1 );
       const double r4 = r2 * r2;
@@ -422,20 +412,17 @@ class Pinhole_Intrinsic_Radial_K3 : public Pinhole_Intrinsic
       if ( !(param & (int)Intrinsic_Parameter_Type::ADJUST_FOCAL_LENGTH)
           || param & (int)Intrinsic_Parameter_Type::NONE )
       {
-        constant_index.push_back(0);
+        constant_index.insert(constant_index.end(), 0);
       }
       if ( !(param & (int)Intrinsic_Parameter_Type::ADJUST_PRINCIPAL_POINT)
           || param & (int)Intrinsic_Parameter_Type::NONE )
       {
-        constant_index.push_back(1);
-        constant_index.push_back(2);
+        constant_index.insert(constant_index.end(), {1, 2});
       }
       if ( !(param & (int)Intrinsic_Parameter_Type::ADJUST_DISTORTION)
           || param & (int)Intrinsic_Parameter_Type::NONE )
       {
-        constant_index.push_back(3);
-        constant_index.push_back(4);
-        constant_index.push_back(5);
+        constant_index.insert(constant_index.end(), {3, 4, 5});
       }
       return constant_index;
     }
@@ -465,22 +452,14 @@ class Pinhole_Intrinsic_Radial_K3 : public Pinhole_Intrinsic
     * @param ar Archive
     */
     template <class Archive>
-    void save( Archive & ar ) const
-    {
-      Pinhole_Intrinsic::save(ar);
-      ar( cereal::make_nvp( "disto_k3", params_ ) );
-    }
+    inline void save( Archive & ar ) const;
 
     /**
     * @brief  Serialization in
     * @param ar Archive
     */
     template <class Archive>
-    void load( Archive & ar )
-    {
-      Pinhole_Intrinsic::load(ar);
-      ar( cereal::make_nvp( "disto_k3", params_ ) );
-    }
+    inline void load( Archive & ar );
 
     /**
     * @brief Clone the object
@@ -496,26 +475,18 @@ class Pinhole_Intrinsic_Radial_K3 : public Pinhole_Intrinsic
 
     /**
     * @brief Functor to solve Square(disto(radius(p'))) = r^2
-    * @param params List of parameters (only the first one is used)
+    * @param params List of the radial factors {k1, k2, k3}
     * @param r2 square distance (relative to center)
     * @return distance
     */
-    static double distoFunctor( const std::vector<double> & params, double r2 )
+    static inline double distoFunctor( const std::vector<double> & params, double r2 )
     {
-      const double k1 = params[0], k2 = params[1], k3 = params[2];
+      const double & k1 = params[0], & k2 = params[1], & k3 = params[2];
       return r2 * Square( 1. + r2 * ( k1 + r2 * ( k2 + r2 * k3 ) ) );
     }
 };
 
 } // namespace cameras
 } // namespace openMVG
-
-#include <cereal/types/polymorphic.hpp>
-#include <cereal/types/vector.hpp>
-
-CEREAL_REGISTER_TYPE_WITH_NAME(openMVG::cameras::Pinhole_Intrinsic_Radial_K1, "pinhole_radial_k1");
-CEREAL_REGISTER_POLYMORPHIC_RELATION(openMVG::cameras::IntrinsicBase, openMVG::cameras::Pinhole_Intrinsic_Radial_K1);
-CEREAL_REGISTER_TYPE_WITH_NAME(openMVG::cameras::Pinhole_Intrinsic_Radial_K3, "pinhole_radial_k3");
-CEREAL_REGISTER_POLYMORPHIC_RELATION(openMVG::cameras::IntrinsicBase, openMVG::cameras::Pinhole_Intrinsic_Radial_K3);
 
 #endif // #ifndef OPENMVG_CAMERAS_CAMERA_PINHOLE_RADIAL_K_HPP
