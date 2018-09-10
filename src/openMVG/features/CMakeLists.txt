@@ -23,11 +23,10 @@ target_include_directories(openMVG_features
   PUBLIC
     $<BUILD_INTERFACE:${EIGEN_INCLUDE_DIRS}>
     $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}>
-    $<BUILD_INTERFACE:${CEREAL_INCLUDE_DIRS}>
     $<INSTALL_INTERFACE:include>
     $<INSTALL_INTERFACE:include/openMVG>
 )
-target_link_libraries(openMVG_features PRIVATE fast stlplus)
+target_link_libraries(openMVG_features PRIVATE fast stlplus cereal)
 if (MSVC)
   target_compile_options(openMVG_features PUBLIC "/bigobj")
 endif ()
@@ -36,7 +35,7 @@ install(TARGETS openMVG_features DESTINATION lib EXPORT openMVG-targets)
 set_property(TARGET openMVG_features PROPERTY FOLDER OpenMVG/OpenMVG)
 
 UNIT_TEST(openMVG features "openMVG_features")
-UNIT_TEST(openMVG image_describer "openMVG_features")
+UNIT_TEST(openMVG image_describer "openMVG_features;cereal")
 
 add_subdirectory(akaze)
 add_subdirectory(mser)

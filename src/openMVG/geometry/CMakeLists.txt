@@ -19,6 +19,7 @@ set_target_properties(openMVG_geometry PROPERTIES SOVERSION ${OPENMVG_VERSION_MA
 target_link_libraries(openMVG_geometry
   PUBLIC
     openMVG_numeric
+    cereal
   PRIVATE
     openMVG_linearProgramming
 )

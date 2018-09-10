@@ -228,15 +228,20 @@ ENDMACRO(UNIT_TEST)
 # ==============================================================================
 # cereal
 # ==============================================================================
-# - internal by default,
-# - external if CEREAL_INCLUDE_DIR_HINTS is defined
+# - external by default
+# - internal if cereal not found
 # ==============================================================================
-if (NOT DEFINED CEREAL_INCLUDE_DIR_HINTS)
-  set(CEREAL_INCLUDE_DIRS
-    ${CMAKE_CURRENT_SOURCE_DIR}/dependencies/cereal/include)
+find_package(cereal QUIET CONFIG)
+if (NOT TARGET cereal)
+  add_library(cereal INTERFACE)
+  target_include_directories(cereal
+    INTERFACE
+      $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/dependencies/cereal/include>
+      $<INSTALL_INTERFACE:include/openMVG_dependencies/cereal/include>
+  )
+  install(TARGETS cereal EXPORT openMVG-targets)
+
   set(OpenMVG_USE_INTERNAL_CEREAL ON)
-else()
-  set(CEREAL_INCLUDE_DIRS ${CEREAL_INCLUDE_DIR_HINTS})
 endif()
 
 # ==============================================================================
