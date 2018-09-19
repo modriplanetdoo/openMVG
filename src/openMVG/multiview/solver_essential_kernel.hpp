@@ -41,6 +41,17 @@ namespace essential {
 namespace kernel {
 
 /**
+ * Five-point algorithm to solve the Essential matrix from 5 points
+ * correspondences. It solves the relative pose problem.
+ * Input point must be normalized one.
+ */
+struct FivePointSolver {
+  enum { MINIMUM_SAMPLES = 5 };
+  enum { MAX_MODELS = 10 };
+  static void Solve(const Mat3X &x1, const Mat3X &x2, std::vector<Mat3> *E);
+};
+
+/**
  * three-point algorithm to solve the orthographic Essential matrix from 3 points
  * correspondences. It solves the relative pose problem.
  * Input point must be normalized one.
@@ -159,6 +170,10 @@ public:
 protected:
   Mat x1_normalized_, x2_normalized_; // Normalized points
 };
+
+//-- Solver kernel for the 5pt Essential Matrix Estimation
+using FivePointKernel = essential::kernel::EssentialKernel<FivePointSolver,
+  fundamental::kernel::SampsonError, Mat3>;
 
 //-- Solver kernel for the 3pt Orthographic Essential Matrix Estimation
 using ThreePointKernel = essential::kernel::EssentialOrthoKernel<ThreePointSolver,

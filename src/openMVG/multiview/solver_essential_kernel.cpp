@@ -40,6 +40,14 @@ namespace openMVG {
 namespace essential {
 namespace kernel {
 
+void FivePointSolver::Solve(const Mat3X &x1, const Mat3X &x2, std::vector<Mat3> *E) {
+  assert(5 <= x1.cols());
+  assert(x1.rows() == x2.rows());
+  assert(x1.cols() == x2.cols());
+
+  FivePointsRelativePose(x1, x2, E);
+}
+
 void ThreePointSolver::Solve(const Mat &x1, const Mat &x2, std::vector<Mat3> *E) {
   assert(2 == x1.rows());
   assert(3 <= x1.cols());

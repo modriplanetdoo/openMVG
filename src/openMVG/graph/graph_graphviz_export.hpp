@@ -17,6 +17,10 @@
 #include <map>
 #include <string>
 
+#if __APPLE__
+#include "TargetConditionals.h"
+#endif
+
 #include "openMVG/types.hpp"
 
 namespace openMVG {
@@ -70,7 +74,6 @@ inline void exportToGraphvizData
   const indexedGraph & graph
 )
 {
-#ifndef WIN32
   // Export the graph as a DOT (graph description language) file
   std::ofstream file(sfile.c_str());
   openMVG::graph::exportToGraphvizFormat_Nodal(graph, file);
@@ -78,6 +81,7 @@ inline void exportToGraphvizData
 
   //Use Graphviz
   const std::string cmd = "neato -Tsvg -O -Goverlap=scale -Gsplines=false " + sfile;
+#ifndef WIN32 && TARGET_OS_IPHONE
   const int ret = std::system(cmd.c_str());
   (void)ret;
 #endif
