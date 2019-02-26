@@ -39,7 +39,13 @@ public:
 
   virtual ~ReconstructionEngine() = default;
 
-  virtual bool Process(C_Progress &progress = C_Progress(0)) = 0;
+  bool Process()
+  {
+    C_Progress progress(0);
+    return Process(progress);
+  }
+
+  virtual bool Process(C_Progress &progress) = 0;
 
   cameras::Intrinsic_Parameter_Type Get_Intrinsics_Refinement_Type() const
   {

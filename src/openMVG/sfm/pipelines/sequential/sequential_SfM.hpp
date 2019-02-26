@@ -41,7 +41,8 @@ public:
   void SetFeaturesProvider(Features_Provider * provider);
   void SetMatchesProvider(Matches_Provider * provider);
 
-  virtual bool Process(C_Progress &progress = C_Progress(0)) override;
+  using ReconstructionEngine::Process;
+  virtual bool Process(C_Progress &progress) override;
 
   void setInitialPair(const Pair & initialPair)
   {

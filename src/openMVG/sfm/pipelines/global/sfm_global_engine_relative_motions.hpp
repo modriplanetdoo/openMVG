@@ -44,7 +44,8 @@ public:
   void SetRotationAveragingMethod(ERotationAveragingMethod eRotationAveragingMethod);
   void SetTranslationAveragingMethod(ETranslationAveragingMethod eTranslation_averaging_method_);
 
-  virtual bool Process(C_Progress &progress = C_Progress(0)) override;
+  using ReconstructionEngine::Process;
+  virtual bool Process(C_Progress &progress) override;
 
 protected:
   /// Compute from relative rotations the global rotations of the camera poses
